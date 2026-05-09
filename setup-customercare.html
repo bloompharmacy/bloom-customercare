@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Bloom Customer Care — Firestore Setup</title>
+  <style>
+    body { font-family: monospace; padding: 24px; background: #1a1a2e; color: #fff; }
+    button { padding: 12px 24px; background: #b22025; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; margin: 8px 4px; }
+    button:hover { background: #8b191d; }
+    #log { margin-top: 20px; padding: 16px; background: #0d0d1a; border-radius: 8px; min-height: 200px; white-space: pre-wrap; font-size: 13px; line-height: 1.6; }
+    .ok  { color: #16a34a; }
+    .err { color: #dc2626; }
+    .inf { color: #6b7280; }
+  </style>
+</head>
+<body>
+<h2 style="color:#b22025">🔧 Bloom Customer Care — Firestore Setup</h2>
+<p style="color:#6b7280;margin-bottom:20px">Run this ONCE to populate Firestore with all stores and users</p>
+<button onclick="runSetup()">▶ Run Full Setup</button>
+<div id="log">Ready — click Run Full Setup to start...</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyC6dO6F02hlsZ9XKaNgmhHCeFJ0cwhfg6o",
+  authDomain: "bloom-delivery-f9540.firebaseapp.com",
+  projectId: "bloom-delivery-f9540",
+  storageBucket: "bloom-delivery-f9540.firebasestorage.app",
+  messagingSenderId: "409469512995",
+  appId: "1:409469512995:web:74eb908a613f3f2c9a3096"
+});
+const db   = getFirestore(app);
+const auth = getAuth(app);
+await signInAnonymously(auth);
+
+const log = document.getElementById('log');
+function print(msg, type = 'inf') {
+  log.innerHTML += '<span class="' + type + '">' + msg + '\n</span>';
+  log.scrollTop = log.scrollHeight;
+}
+
+window.runSetup = async function() {
+  log.innerHTML = '';
+  print('Starting Customer Care setup...\n');
+
+  try {
+    // ── Stores ──────────────────────────────────────────────────────────────
+    print('📦 Creating stores...');
+    const stores = [
+      { id: 'WN01', name: 'Wadi Al Nile' },
+      { id: 'P902', name: 'Point 90' },
+      { id: 'CA03', name: 'Capital' },
+      { id: 'AL04', name: 'Almaza' },
+      { id: 'MO05', name: 'Mall of Arabia' },
+      { id: 'UP06', name: 'Uptown' },
+      { id: 'S307', name: 'Street 31' },
+      { id: 'DP08', name: 'Diplo' },
+      { id: 'OS05', name: 'Online Store' },
+    ];
+    for (const s of stores) {
+      await setDoc(doc(db, 'cc_stores', s.id), { name: s.name, active: true });
+      print('  ✓ ' + s.name + ' (' + s.id + ')');
+    }
+    print('✅ Stores done\n', 'ok');
+
+    // ── Admins ───────────────────────────────────────────────────────────────
+    print('👤 Creating admins...');
+    const admins = [
+      { username: 'H.haddad', password: '4862', email: 'h.elhaddad@bloom.com.eg' },
+      { username: 'M.saad',   password: '3664', email: 'm.saad@bloom.com.eg' },
+      { username: 'M.mohie',  password: '2437', email: 'M.mohie@bloom.com.eg' },
+    ];
+    for (const a of admins) {
+      await setDoc(doc(db, 'cc_users', a.username), {
+        username: a.username, password: a.password,
+        role: 'admin', store_id: null, email: a.email
+      });
+      print('  ✓ ' + a.username + ' (admin)');
+    }
+    print('✅ Admins done\n', 'ok');
+
+    // ── Managers ─────────────────────────────────────────────────────────────
+    print('👔 Creating branch managers...');
+    const managers = [
+      { username: 'a.saeid',    password: '3927', store_id: 'WN01', name: 'Wadi Al Nile',    email: 'a.saied@bloom.com.eg' },
+      { username: 'e.omran',    password: '8104', store_id: 'P902', name: 'Point 90',         email: 'e.omran@bloom.com.eg' },
+      { username: 'o.sameh',    password: '5592', store_id: 'CA03', name: 'Capital',          email: 'o.sameh@bloom.com.eg' },
+      { username: 'b.ibrahim',  password: '1738', store_id: 'AL04', name: 'Almaza',           email: 'b.ibrahim@bloom.com.eg' },
+      { username: 'n.ahmed',    password: '6041', store_id: 'MO05', name: 'Mall of Arabia',   email: 'n.ahmed@bloom.com.eg' },
+      { username: 'm.emaad',    password: '9283', store_id: 'UP06', name: 'Uptown',           email: 'm.emaad@bloom.com.eg' },
+      { username: 'a.dory',     password: '4416', store_id: 'S307', name: 'Street 31',        email: 'a.dory@bloom.com.eg' },
+      { username: 'a.elshamaa', password: '2075', store_id: 'DP08', name: 'Diplo',            email: 'a.elshamaa@bloom.com.eg' },
+      { username: 'S.adel',     password: '1256', store_id: 'OS05', name: 'Online Store',     email: 'customersupport@bloompharmacy.com' },
+    ];
+    for (const m of managers) {
+      await setDoc(doc(db, 'cc_users', m.username), {
+        username: m.username, password: m.password,
+        role: 'manager', store_id: m.store_id, email: m.email
+      });
+      print('  ✓ ' + m.username + ' → ' + m.name);
+    }
+    print('✅ Managers done\n', 'ok');
+
+    print('🎉 SETUP COMPLETE!\n', 'ok');
+    print('Feedback form URLs:', 'ok');
+    stores.forEach(s => {
+      print('  ' + s.name + ': ?storeId=' + s.id + '&storeName=' + encodeURIComponent(s.name), 'ok');
+    });
+    print('\nDashboard login credentials:', 'ok');
+    print('  Admins: H.haddad/4862 | M.saad/3664 | M.mohie/2437', 'ok');
+
+  } catch(e) {
+    print('\n❌ Error: ' + e.message, 'err');
+    print('Make sure Firestore is in TEST MODE in Firebase console', 'err');
+  }
+};
+</script>
+</body>
+</html>
