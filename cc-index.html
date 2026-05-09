@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bloom — Share Your Experience</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    :root{--bloom:#b22025;--bloom-dark:#8b191d;--gold:#f1c40f;--bg:#fdf2f2;--surface:#ffffff;--text:#1a1a1a;--muted:#6b7280;--radius:16px;--font-head:'Sora',sans-serif;--font-body:'DM Sans',sans-serif;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);font-family:var(--font-body);color:var(--text);min-height:100vh;}
+    .hero{background:linear-gradient(135deg,var(--bloom-dark) 0%,var(--bloom) 55%,#d9472b 100%);color:#fff;padding:44px 20px 70px;text-align:center;position:relative;overflow:hidden;}
+    .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 70% 30%,rgba(255,255,255,.08) 0%,transparent 60%);pointer-events:none;}
+    .hero h1{font-family:var(--font-head);font-size:28px;font-weight:800;letter-spacing:-.02em;}
+    .hero p{font-size:14px;opacity:.8;margin-top:6px;}
+    .store-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:100px;padding:6px 16px;font-size:13px;font-weight:500;margin-top:14px;backdrop-filter:blur(6px);}
+    .store-badge::before{content:'📍';font-size:12px;}
+    .form-wrap{max-width:540px;margin:-44px auto 40px;padding:0 16px;}
+    .form-card{background:var(--surface);border-radius:24px;box-shadow:0 20px 60px rgba(178,32,37,.12),0 4px 16px rgba(0,0,0,.06);padding:36px 32px;animation:riseUp .5s cubic-bezier(.22,1,.36,1) .1s both;}
+    @keyframes riseUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}
+    .rating-section{text-align:center;margin-bottom:28px;}
+    .rating-label{font-family:var(--font-head);font-size:14px;font-weight:600;margin-bottom:12px;display:block;}
+    .stars-row{display:flex;justify-content:center;gap:6px;}
+    .star{font-size:2.6rem;color:#d1d5db;cursor:pointer;transition:color .15s,transform .15s;line-height:1;user-select:none;-webkit-tap-highlight-color:transparent;}
+    .star:hover,.star.hover{color:var(--gold);transform:scale(1.15);}
+    .star.selected{color:var(--gold);}
+    .rating-hint{font-size:12px;color:var(--muted);margin-top:8px;height:18px;transition:opacity .2s;}
+    .field-group{margin-bottom:18px;}
+    .field-label{display:block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;}
+    .field-label .req{color:var(--bloom);margin-left:2px;}
+    .field-input{width:100%;padding:12px 14px;font-family:var(--font-body);font-size:14px;border:1.5px solid #e5e7eb;border-radius:12px;outline:none;transition:border .2s,box-shadow .2s;background:#fafafa;color:var(--text);}
+    .field-input:focus{border-color:var(--bloom);box-shadow:0 0 0 3px rgba(178,32,37,.1);background:#fff;}
+    .field-input.error{border-color:var(--bloom);}
+    .field-hint{font-size:11px;color:var(--muted);margin-top:4px;}
+    .field-error{font-size:11px;color:var(--bloom);margin-top:4px;display:none;}
+    .field-error.show{display:block;}
+    textarea.field-input{resize:vertical;min-height:90px;}
+    .btn-submit{width:100%;padding:15px;background:var(--bloom);color:#fff;border:none;border-radius:14px;font-family:var(--font-head);font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.02em;transition:background .2s,transform .15s,box-shadow .2s;box-shadow:0 4px 16px rgba(178,32,37,.3);margin-top:8px;}
+    .btn-submit:hover:not(:disabled){background:var(--bloom-dark);box-shadow:0 6px 20px rgba(178,32,37,.4);}
+    .btn-submit:active:not(:disabled){transform:scale(.98);}
+    .btn-submit:disabled{opacity:.7;cursor:not-allowed;}
+    .thankyou{text-align:center;padding:40px 20px;animation:riseUp .5s cubic-bezier(.22,1,.36,1) both;}
+    .thankyou .check{font-size:52px;margin-bottom:16px;}
+    .thankyou h2{font-family:var(--font-head);color:var(--bloom);font-size:24px;margin-bottom:8px;}
+    .thankyou p{color:var(--muted);font-size:14px;}
+    .ticket-badge{display:inline-block;background:var(--bg);border:1.5px solid var(--bloom);color:var(--bloom);border-radius:100px;padding:6px 18px;font-family:monospace;font-size:13px;margin-top:14px;}
+    @media(max-width:480px){.form-card{padding:28px 20px;}.star{font-size:2.2rem;}}
+  </style>
+</head>
+<body>
+<div class="hero">
+  <h1 style="font-family:var(--font-head);font-size:28px;font-weight:800;color:#fff;letter-spacing:-.02em;margin:0 0 4px;">Bloom Pharmacy</h1>
+  <h1>Share Your Experience</h1>
+  <p>Your feedback helps us serve you better</p>
+  <div id="storeDisplay" class="store-badge" style="display:none;"></div>
+</div>
+
+<div class="form-wrap">
+  <div class="form-card" id="formCard">
+    <form id="feedbackForm" novalidate>
+      <input type="hidden" id="storeId"   value="">
+      <input type="hidden" id="storeName" value="">
+      <input type="hidden" id="starVal"   value="0">
+
+      <div class="rating-section">
+        <span class="rating-label">How would you rate your visit?</span>
+        <div class="stars-row" id="starsRow">
+          <span class="star" data-v="1">★</span><span class="star" data-v="2">★</span>
+          <span class="star" data-v="3">★</span><span class="star" data-v="4">★</span>
+          <span class="star" data-v="5">★</span>
+        </div>
+        <div class="rating-hint" id="ratingHint">Tap a star to rate</div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Full Name<span class="req">*</span></label>
+        <input type="text" id="name" class="field-input" placeholder="e.g. Ahmed Hassan" maxlength="100" required>
+        <div class="field-error" id="nameErr">Please enter your name.</div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Mobile Number<span class="req">*</span></label>
+        <input type="tel" id="phone" class="field-input" placeholder="01XXXXXXXXX or +44XXXXXXXXXX" maxlength="20" inputmode="tel" autocomplete="tel" required>
+        <div class="field-hint">Egyptian numbers preferred for faster follow-up (e.g. 01XXXXXXXXX)</div>
+        <div class="field-error" id="phoneErr">Please enter a valid mobile number.</div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Email Address <span style="color:var(--muted);font-weight:400;text-transform:none">(Optional)</span></label>
+        <input type="email" id="email" class="field-input" placeholder="your@email.com" maxlength="100" autocomplete="email">
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Tell us more<span class="req">*</span></label>
+        <textarea id="review" class="field-input" rows="3" placeholder="What did you love? What can we improve?" maxlength="2000" required></textarea>
+        <div class="field-hint"><span id="charCount">0</span> / 2000</div>
+        <div class="field-error" id="reviewErr">Please share your feedback.</div>
+      </div>
+
+      <button type="submit" id="subBtn" class="btn-submit">Submit Feedback</button>
+    </form>
+
+    <div style="margin-top:22px;padding-top:18px;border-top:1px solid #f0e8e8;text-align:center;">
+      <p style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin-bottom:10px;">Visit Bloom Pharmacy</p>
+      <div style="display:flex;gap:8px;">
+        <a href="https://www.bloompharmacy.com/" target="_blank" rel="noopener"
+           style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 8px;border:1.5px solid #f0e8e8;border-radius:10px;text-decoration:none;color:var(--bloom);font-size:12px;font-weight:600;">
+          🛍️ Shop Online
+        </a>
+        <a href="https://www.bloompharmacy.com/pages/store-locator" target="_blank" rel="noopener"
+           style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 8px;border:1.5px solid #f0e8e8;border-radius:10px;text-decoration:none;color:var(--muted);font-size:12px;font-weight:500;">
+          📍 Store Locator
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp }    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, runTransaction, serverTimestamp, increment }
+                            from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const app = initializeApp({
+  apiKey:"AIzaSyCccdLw-wMiy4YahpU8lq6PxJJoDra1g5s",
+  authDomain:"bloom-customercare.firebaseapp.com",
+  projectId:"bloom-customercare",
+  storageBucket:"bloom-customercare.firebasestorage.app",
+  messagingSenderId:"925494560966",
+  appId:"1:925494560966:web:2c8bfadbc125f0f6ae2fc7"
+});
+const db   = getFirestore(app);
+const auth = getAuth(app);
+await signInAnonymously(auth);
+
+const HINTS       = ['','Very dissatisfied','Dissatisfied','Neutral','Satisfied','Very satisfied!'];
+const VALID_STORES = ['WN01','P902','CA03','AL04','MO05','UP06','S307','DP08','OS05'];
+
+// Admin emails for low-rating alerts
+const ADMIN_EMAILS = ['h.elhaddad@bloom.com.eg','m.saad@bloom.com.eg','M.mohie@bloom.com.eg'];
+
+// ── Email notifications via Google Apps Script Web App (free tier — 100 emails/day) ──
+// Deploy the GAS script (see deployment instructions in repo) and paste the Web App URL here.
+// The shared secret protects against abuse since GAS Web Apps are publicly accessible.
+const GAS_WEBHOOK_URL    = 'https://script.google.com/macros/s/AKfycbzW2wNjMzTwan0PVAg_VAKkmJ1YpWuJy5wb8pTdpsszX162ZnWrN3gngAtXASLX33DI/exec';
+const GAS_SHARED_SECRET  = 'bloomph.st.2608';
+
+// Read URL params
+const params    = new URLSearchParams(window.location.search);
+const storeId   = params.get('storeId')   || '';
+const storeName = params.get('storeName') || '';
+
+document.getElementById('storeId').value   = storeId;
+document.getElementById('storeName').value = storeName;
+
+if (!storeId || !VALID_STORES.includes(storeId)) {
+  document.getElementById('formCard').innerHTML =
+    '<div style="text-align:center;padding:40px 20px">' +
+    '<div style="font-size:48px;margin-bottom:16px">🔗</div>' +
+    '<h3 style="font-family:\'Sora\',sans-serif;color:#b22025">Invalid Link</h3>' +
+    '<p style="color:#6b7280;margin-top:8px">Please scan the QR code at your nearest Bloom branch.</p>' +
+    '</div>';
+} else {
+  if (storeName) {
+    document.getElementById('storeDisplay').textContent = storeName;
+    document.getElementById('storeDisplay').style.display = 'inline-flex';
+  }
+}
+
+// Stars
+document.querySelectorAll('.star').forEach(star => {
+  star.addEventListener('click', () => {
+    const v = +star.getAttribute('data-v');
+    document.getElementById('starVal').value = v;
+    document.querySelectorAll('.star').forEach(s => s.classList.toggle('selected', +s.getAttribute('data-v') <= v));
+    document.getElementById('ratingHint').textContent = HINTS[v];
+  });
+  star.addEventListener('mouseenter', () => {
+    const v = +star.getAttribute('data-v');
+    document.querySelectorAll('.star').forEach(s => s.classList.toggle('hover', +s.getAttribute('data-v') <= v));
+  });
+  star.addEventListener('mouseleave', () => document.querySelectorAll('.star').forEach(s => s.classList.remove('hover')));
+});
+
+// Phone
+const phoneInput = document.getElementById('phone');
+phoneInput.addEventListener('input', () => {
+  const v = phoneInput.value;
+  phoneInput.value = v.startsWith('+') ? '+' + v.slice(1).replace(/[^0-9]/g,'') : v.replace(/[^0-9]/g,'');
+});
+phoneInput.addEventListener('keydown', e => {
+  const ok = ['Backspace','Delete','Tab','Escape','Enter','ArrowLeft','ArrowRight','Home','End'];
+  if (!ok.includes(e.key) && !/^[0-9+]$/.test(e.key)) e.preventDefault();
+});
+
+// Review counter
+document.getElementById('review').addEventListener('input', function() {
+  document.getElementById('charCount').textContent = this.value.length;
+});
+
+// Validation
+function showErr(id, msg, show) {
+  const el = document.getElementById(id);
+  if (msg) el.textContent = msg;
+  el.classList.toggle('show', !!show);
+}
+function clearErrors() {
+  ['nameErr','phoneErr','reviewErr'].forEach(id => showErr(id, null, false));
+  document.querySelectorAll('.field-input').forEach(el => el.classList.remove('error'));
+}
+
+// Submit
+document.getElementById('feedbackForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  clearErrors();
+
+  const stars  = parseInt(document.getElementById('starVal').value, 10);
+  const name   = document.getElementById('name').value.trim();
+  const phone  = phoneInput.value.trim();
+  const email  = document.getElementById('email').value.trim();
+  const review = document.getElementById('review').value.trim();
+
+  if (stars === 0) {
+    Swal.fire({ title:'Rating required', text:'Please tap a star to rate your experience.', icon:'warning', confirmButtonColor:'#b22025' });
+    return;
+  }
+
+  let valid = true;
+  if (!name)   { showErr('nameErr', null, true);   document.getElementById('name').classList.add('error');   valid = false; }
+  const phoneOk = /^01[0-9]{9}$/.test(phone) || /^[+][1-9][0-9]{6,14}$/.test(phone);
+  if (!phoneOk) { showErr('phoneErr', null, true);  phoneInput.classList.add('error');                        valid = false; }
+  if (!review)  { showErr('reviewErr', null, true); document.getElementById('review').classList.add('error'); valid = false; }
+  if (!valid) return;
+
+  // Rate limit check (5 min per phone)
+  const phoneHash = phone.replace(/\D/g,'');
+  try {
+    const rlDoc = await getDoc(doc(db, 'rate_limits', phoneHash));
+    if (rlDoc.exists()) {
+      const exp = rlDoc.data().expires_at?.toDate?.();
+      if (exp && exp > new Date()) {
+        Swal.fire({ title:'Please wait', text:'Please wait a few minutes before submitting again.', icon:'info', confirmButtonColor:'#b22025' });
+        return;
+      }
+    }
+  } catch(_) {}
+
+  const btn = document.getElementById('subBtn');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+
+  try {
+    // ── Atomic ticket number (storeId-N) ─────────────────────────────────────
+    const storeRef = doc(db, 'stores', storeId);
+    let ticketNum;
+    let storeData = null;  // capture for later (manager email lookup)
+    await runTransaction(db, async tx => {
+      const storeSnap = await tx.get(storeRef);
+      const existing  = storeSnap.exists() ? storeSnap.data() : {};
+      storeData       = existing;
+      const counter   = (existing.ticket_counter || 0) + 1;
+      ticketNum       = storeId + '-' + counter;
+      // Use set+merge so this works even if the store doc doesn't exist yet,
+      // or exists without the ticket_counter field. Preserves name/email/active.
+      tx.set(storeRef, { ticket_counter: counter }, { merge: true });
+    });
+
+    const ticketId = ticketNum; // e.g. "WN01-3"
+
+    // ── Save ticket ───────────────────────────────────────────────────────────
+    await setDoc(doc(db, 'tickets', ticketId), {
+      ticket_id:    ticketId,
+      store_id:     storeId,
+      store_name:   storeName,
+      name,
+      phone,
+      email,
+      review,
+      rating:       stars,
+      status:       'New',
+      notes:        '',
+      created_at:   serverTimestamp(),
+      last_updated: serverTimestamp(),
+    });
+
+    // ── Audit log ─────────────────────────────────────────────────────────────
+    await setDoc(doc(db, 'logs', ticketId + '_0'), {
+      ticket_id:  ticketId,
+      user:       'Customer (' + phone + ')',
+      action:     'Ticket Created',
+      detail:     'Store: ' + storeName + ' | Rating: ' + stars + '/5',
+      created_at: serverTimestamp(),
+    });
+
+    // ── Rate limit ────────────────────────────────────────────────────────────
+    await setDoc(doc(db, 'rate_limits', phoneHash), {
+      expires_at: new Date(Date.now() + 5 * 60 * 1000)
+    });
+
+    // ── Email notification via Google Apps Script (fire-and-forget) ──────────
+    // Logic from old GAS implementation:
+    //   rating <= 2  →  alert ALL admins (it's a complaint)
+    //   rating >= 3  →  alert branch manager only (positive feedback)
+    // We use no-cors mode so the request goes through even though GAS doesn't
+    // send proper CORS headers, and we never await — the user sees success
+    // immediately, email delivery happens in the background.
+    if (GAS_WEBHOOK_URL && !GAS_WEBHOOK_URL.startsWith('PASTE_')) {
+      const isLowRating = stars <= 2;
+      const managerEmail = (storeData && storeData.email) ? storeData.email : '';
+      const recipients = isLowRating
+        ? ADMIN_EMAILS                                     // complaint → all admins
+        : (managerEmail ? [managerEmail] : ADMIN_EMAILS);  // positive → manager (fallback admins)
+
+      const payload = {
+        secret:      GAS_SHARED_SECRET,
+        ticket_id:   ticketId,
+        store_id:    storeId,
+        store_name:  storeName,
+        customer:    name,
+        phone,
+        email,
+        rating:      stars,
+        review,
+        is_low:      isLowRating,
+        recipients,
+        admin_emails: ADMIN_EMAILS,
+        manager_email: managerEmail,
+        timestamp:   new Date().toISOString()
+      };
+
+      // Fire-and-forget — user shouldn't wait for email delivery.
+      fetch(GAS_WEBHOOK_URL, {
+        method: 'POST',
+        mode:   'no-cors',
+        headers:{ 'Content-Type': 'text/plain;charset=utf-8' },  // text/plain avoids CORS preflight
+        body:   JSON.stringify(payload)
+      }).catch(err => console.warn('Email webhook failed (non-fatal):', err));
+    }
+
+    // ── Success screen ────────────────────────────────────────────────────────
+    const isLow = stars <= 2;
+    document.getElementById('formCard').innerHTML =
+      '<div class="thankyou">' +
+      (isLow
+        ? '<div class="check">❤️</div>' +
+          '<p>We\'re sorry that your experience didn\'t meet your expectations. ' +
+          'Our team will review your feedback and reach out to you as soon as possible to assist you.</p>' +
+          '<p style="margin-top:10px;font-size:13px;color:var(--muted);">Your ticket reference has been recorded for follow-up.</p>'
+        : '<div class="check">✅</div><h2>Thank You!</h2>' +
+          '<p>Your feedback has been received and forwarded to our team.</p>'
+      ) +
+      '<div class="ticket-badge" style="margin-top:16px;">Ticket: ' + ticketId + '</div>' +
+      '</div>';
+
+  } catch(err) {
+    btn.disabled = false; btn.textContent = 'Submit Feedback';
+    Swal.fire({ title:'Submission Failed', text:'Something went wrong. Please try again.', icon:'error', confirmButtonColor:'#b22025' });
+    console.error(err);
+  }
+});
+</script>
+</body>
+</html>
