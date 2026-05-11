@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Bloom CC — Users & Stores Seeder</title>
+<style>
+  :root {
+    --bloom: #b22025;
+    --bloom-dark: #8b191d;
+    --bloom-light: #fdf2f2;
+    --bg: #f4f4f6;
+    --surface: #ffffff;
+    --border: #e5e7eb;
+    --text: #1a1a2e;
+    --muted: #6b7280;
+    --success: #16a34a;
+    --error: #dc2626;
+    --warning: #d97706;
+    --info: #2563eb;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: 'DM Sans', system-ui, -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 30px; color: var(--text); }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .card { background: var(--surface); border-radius: 12px; padding: 24px 28px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 18px; }
+  h1 { color: var(--bloom); font-family: 'Sora', sans-serif; margin: 0 0 6px; font-size: 24px; }
+  h2 { font-family: 'Sora', sans-serif; font-size: 17px; margin: 0 0 14px; color: var(--text); }
+  .meta { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .b-add    { background: #dcfce7; color: #166534; }
+  .b-update { background: #fef3c7; color: #92400e; }
+  .b-same   { background: #f3f4f6; color: #6b7280; }
+  .b-delete { background: #fee2e2; color: #991b1b; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { background: var(--bloom-light); color: var(--bloom); font-family: 'Sora', sans-serif; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td.mono { font-family: 'Courier New', monospace; }
+  td.diff { background: #fffbeb; }
+  .btn { background: var(--bloom); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: inherit; }
+  .btn:hover { background: var(--bloom-dark); }
+  .btn:disabled { background: #d1d5db; cursor: not-allowed; }
+  .btn-secondary { background: white; color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--bg); }
+  .alert { padding: 14px 18px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
+  .alert-warn { background: #fef3c7; border-left: 4px solid var(--warning); color: #78350f; }
+  .alert-ok { background: #dcfce7; border-left: 4px solid var(--success); color: #14532d; }
+  .alert-err { background: #fee2e2; border-left: 4px solid var(--error); color: #991b1b; }
+  .alert-info { background: #dbeafe; border-left: 4px solid var(--info); color: #1e3a8a; }
+  .checkbox-row { padding: 12px 16px; background: var(--bg); border-radius: 8px; margin: 12px 0; font-size: 14px; }
+  .checkbox-row input { margin-right: 8px; transform: scale(1.2); vertical-align: middle; }
+  .step-num { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: var(--bloom); color: white; border-radius: 50%; font-weight: bold; margin-right: 10px; font-size: 14px; }
+  .log { font-family: 'Courier New', monospace; font-size: 12px; background: #1a1a2e; color: #a3e635; padding: 16px; border-radius: 8px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+  .summary-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .summary-stat .num { font-size: 24px; font-weight: 700; font-family: 'Sora', sans-serif; }
+  .summary-stat .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+  .delete-section { margin-top: 14px; padding: 14px; background: #fef2f2; border-radius: 8px; border: 1px solid #fecaca; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="card">
+    <h1>🌱 Bloom CC — Users & Stores Seeder</h1>
+    <div class="meta">One-time tool to populate the <code>users</code> and <code>stores</code> collections in <strong>bloom-customercare</strong> with the correct values from your master list. Always shows a preview before writing.</div>
+  </div>
+
+  <!-- Step 1: Load -->
+  <div class="card">
+    <h2><span class="step-num">1</span>Load current Firestore state</h2>
+    <button class="btn" id="btnLoad" onclick="loadState()">📥 Read current users + stores from Firestore</button>
+    <div id="loadStatus" style="margin-top:14px;"></div>
+  </div>
+
+  <!-- Step 2: Preview -->
+  <div class="card" id="previewCard" style="display:none;">
+    <h2><span class="step-num">2</span>Preview changes</h2>
+
+    <div class="grid-2" style="margin-bottom:18px;" id="summaryStats"></div>
+
+    <h2 style="margin-top:24px;">Users (<code>/users</code> collection)</h2>
+    <div id="usersDiff"></div>
+
+    <h2 style="margin-top:24px;">Stores (<code>/stores</code> collection)</h2>
+    <div id="storesDiff"></div>
+
+    <div class="delete-section" id="orphanSection" style="display:none;">
+      <strong style="color:#991b1b;">⚠️ Orphan documents detected</strong>
+      <p style="font-size:13px;margin:6px 0 10px;color:#7f1d1d;">These documents exist in Firestore but are NOT in your master list. They might be old test users or typos. Decide what to do:</p>
+      <div id="orphansList"></div>
+      <label class="checkbox-row" style="margin-top:10px;display:block;">
+        <input type="checkbox" id="deleteOrphans"> <strong>Delete orphan documents</strong> — uncheck to keep them.
+      </label>
+    </div>
+  </div>
+
+  <!-- Step 3: Apply -->
+  <div class="card" id="applyCard" style="display:none;">
+    <h2><span class="step-num">3</span>Apply changes</h2>
+    <div class="alert alert-warn">
+      <strong>This is the only destructive step.</strong> Once you click below, Firestore will be modified. The previous step shows exactly what will happen. Re-read it carefully.
+    </div>
+    <button class="btn" id="btnApply" onclick="applyChanges()">✅ Apply all changes to Firestore</button>
+    <button class="btn btn-secondary" onclick="loadState()" style="margin-left:8px;">🔄 Reload preview</button>
+    <div id="applyLog" class="log" style="display:none;margin-top:16px;"></div>
+  </div>
+
+  <!-- Step 4: Verify -->
+  <div class="card" id="verifyCard" style="display:none;">
+    <h2><span class="step-num">4</span>Done!</h2>
+    <div class="alert alert-ok">
+      <strong>✅ All changes applied successfully.</strong>
+      <p style="margin:8px 0 0;">You can now:</p>
+      <ul style="margin:6px 0 0;padding-left:24px;">
+        <li>Open <a href="cc-admin.html" target="_blank">cc-admin.html</a> and log in with any of the seeded users</li>
+        <li>Submit a feedback form — branch manager emails will route correctly</li>
+        <li><strong>Delete this seed file</strong> from your repo so no one else runs it accidentally</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, deleteDoc, writeBatch, deleteField, updateDoc }
+       from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const app = initializeApp({
+  apiKey:"AIzaSyCccdLw-wMiy4YahpU8lq6PxJJoDra1g5s",
+  authDomain:"bloom-customercare.firebaseapp.com",
+  projectId:"bloom-customercare",
+  storageBucket:"bloom-customercare.firebasestorage.app",
+  messagingSenderId:"925494560966",
+  appId:"1:925494560966:web:2c8bfadbc125f0f6ae2fc7"
+});
+const db = getFirestore(app);
+const auth = getAuth(app);
+await signInAnonymously(auth);
+
+// Guard: confirm bcryptjs loaded (window.bcrypt or window.dcodeIO.bcrypt namespace)
+const bcryptLib = (typeof bcrypt !== 'undefined') ? bcrypt
+                : (typeof dcodeIO !== 'undefined' && dcodeIO.bcrypt) ? dcodeIO.bcrypt
+                : null;
+if (!bcryptLib) {
+  document.body.innerHTML = '<div style="max-width:600px;margin:60px auto;padding:24px;background:#fee2e2;border-left:4px solid #dc2626;border-radius:8px;font-family:system-ui;color:#991b1b;">' +
+    '<h2 style="margin:0 0 10px;color:#991b1b;">❌ bcrypt library failed to load</h2>' +
+    '<p style="margin:0;">Try: hard refresh (Ctrl+Shift+R), disable ad blockers, or use a different network. The seeder needs bcryptjs from <code>cdnjs.cloudflare.com</code> to hash passwords.</p></div>';
+  throw new Error('bcrypt library not loaded');
+}
+window.bcrypt = bcryptLib;
+
+// Some browsers need a random fallback if Web Crypto API isn't auto-detected.
+if (typeof bcryptLib.setRandomFallback === 'function') {
+  bcryptLib.setRandomFallback((len) => {
+    const buf = new Uint8Array(len);
+    (window.crypto || window.msCrypto).getRandomValues(buf);
+    return Array.from(buf);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MASTER DATA — exactly as provided in the table
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ADMINS — see all branches, no store_id
+const ADMINS = [
+  { docId: 'H.haddad', password: '4862', email: 'h.elhaddad@bloom.com.eg' },
+  { docId: 'M.saad',   password: '3664', email: 'm.saad@bloom.com.eg' },
+  { docId: 'M.mohie',  password: '2437', email: 'M.mohie@bloom.com.eg' },
+];
+
+// MANAGERS — one per branch
+// docId = login username (case as shown). store_id matches the stores collection.
+// store_name is for display. email = manager's personal email for notifications.
+const MANAGERS = [
+  { docId: 'a.saeid',    password: '3927', store_id: 'WN01', store_name: 'Wadi Al Nile',   email: 'a.saied@bloom.com.eg' },
+  { docId: 'e.omran',    password: '8104', store_id: 'P902', store_name: 'Point 90',       email: 'e.omran@bloom.com.eg' },
+  { docId: 'o.sameh',    password: '5592', store_id: 'CA03', store_name: 'Capital',        email: 'o.sameh@bloom.com.eg' },
+  { docId: 'b.ibrahim',  password: '1738', store_id: 'AL04', store_name: 'Almaza',         email: 'b.ibrahim@bloom.com.eg' },
+  { docId: 'n.ahmed',    password: '6041', store_id: 'MO05', store_name: 'Mall of Arabia', email: 'n.ahmed@bloom.com.eg' },
+  { docId: 'm.emaad',    password: '9283', store_id: 'UP06', store_name: 'Uptown',         email: 'm.emaad@bloom.com.eg' },
+  { docId: 'a.dory',     password: '4416', store_id: 'S307', store_name: 'Street 31',      email: 'a.dory@bloom.com.eg' },
+  { docId: 'a.elshamaa', password: '2075', store_id: 'DP08', store_name: 'Diplo',          email: 'a.elshamaa@bloom.com.eg' },
+  { docId: 'S.adel',     password: '1256', store_id: 'OS05', store_name: 'Online Store',   email: 'customersupport@bloompharmacy.com' },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Build target state
+// ═══════════════════════════════════════════════════════════════════════════════
+const BCRYPT_COST = 10;
+
+// Hash a password with bcrypt. Synchronous, ~80ms per call — fine for 12 users.
+function hashPwd(plain) {
+  const salt = bcrypt.genSaltSync(BCRYPT_COST);
+  return bcrypt.hashSync(plain, salt);
+}
+
+function buildTargetUsers() {
+  const out = {};
+  for (const a of ADMINS) {
+    out[a.docId] = {
+      username:      a.docId,
+      password_hash: hashPwd(a.password),  // bcrypt hash — original password not stored
+      role:          'admin',              // code-friendly value (cc-admin.html checks this)
+      store_id:      null,                 // admins see all branches
+      email:         a.email,
+    };
+  }
+  for (const m of MANAGERS) {
+    out[m.docId] = {
+      username:      m.docId,
+      password_hash: hashPwd(m.password),
+      role:          'manager',
+      store_id:      m.store_id,
+      email:         m.email,
+    };
+  }
+  return out;
+}
+
+function buildTargetStores() {
+  const out = {};
+  for (const m of MANAGERS) {
+    out[m.store_id] = {
+      name:   m.store_name,
+      email:  m.email,           // used by cc-index.html for positive-rating routing
+      active: true,
+      // ticket_counter is intentionally NOT seeded — preserved if it exists,
+      // initialized to 0 by cc-index.html on first ticket if missing.
+    };
+  }
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════════════════════════════════════════
+let currentUsers   = {};   // docId → data
+let currentStores  = {};
+let targetUsers    = buildTargetUsers();
+let targetStores   = buildTargetStores();
+let plan           = null; // computed in step 2
+
+function esc(s) {
+  if (s === null || s === undefined) return '<span style="color:#9ca3af;font-style:italic">—</span>';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Step 1: Load
+// ═══════════════════════════════════════════════════════════════════════════════
+window.loadState = async function() {
+  const status = document.getElementById('loadStatus');
+  document.getElementById('btnLoad').disabled = true;
+  status.innerHTML = '<div class="alert alert-info">Loading…</div>';
+
+  try {
+    const [uSnap, sSnap] = await Promise.all([
+      getDocs(collection(db, 'users')),
+      getDocs(collection(db, 'stores')),
+    ]);
+    currentUsers = {};
+    uSnap.docs.forEach(d => { currentUsers[d.id] = d.data(); });
+    currentStores = {};
+    sSnap.docs.forEach(d => { currentStores[d.id] = d.data(); });
+
+    status.innerHTML = '<div class="alert alert-ok">✅ Loaded <strong>' + Object.keys(currentUsers).length +
+                       '</strong> existing users and <strong>' + Object.keys(currentStores).length +
+                       '</strong> existing stores from Firestore.</div>';
+
+    computePreview();
+    document.getElementById('previewCard').style.display = 'block';
+    document.getElementById('applyCard').style.display = 'block';
+    document.getElementById('btnLoad').disabled = false;
+  } catch (err) {
+    console.error(err);
+    status.innerHTML = '<div class="alert alert-err">❌ Failed to read Firestore: ' + esc(err.message) + '</div>';
+    document.getElementById('btnLoad').disabled = false;
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Step 2: Compute & render preview
+// ═══════════════════════════════════════════════════════════════════════════════
+function diffField(oldVal, newVal) {
+  // Treat null/undefined/'' as equivalent for "missing" checks
+  const oldNorm = (oldVal === undefined || oldVal === null) ? null : oldVal;
+  const newNorm = (newVal === undefined || newVal === null) ? null : newVal;
+  return oldNorm !== newNorm;
+}
+
+// Special compare for password_hash: bcrypt hashes vary on every encode (random salt),
+// so we can't naively compare them. Instead: if the existing record already has a valid
+// hash for the same plain password, it's "unchanged" — no rewrite needed.
+function passwordChanged(existing, sourcePlainPassword) {
+  if (!existing) return true;
+  if (existing.password_hash) {
+    try {
+      // Hash matches plain password? → unchanged.
+      return !bcrypt.compareSync(sourcePlainPassword, existing.password_hash);
+    } catch(e) { return true; }
+  }
+  // No hash yet (legacy plain or empty) → needs migration.
+  return true;
+}
+
+// Map docId → source plain password (for comparison only — never written to DB)
+const sourcePlainPasswords = {};
+for (const a of ADMINS)   sourcePlainPasswords[a.docId] = a.password;
+for (const m of MANAGERS) sourcePlainPasswords[m.docId] = m.password;
+
+function computePreview() {
+  const userPlan = [];
+  for (const docId of Object.keys(targetUsers)) {
+    const target = targetUsers[docId];
+    const existing = currentUsers[docId];
+    if (!existing) {
+      userPlan.push({ docId, action: 'add', target, existing: null });
+    } else {
+      const diffs = {};
+      let any = false;
+      for (const k of Object.keys(target)) {
+        if (k === 'password_hash') {
+          // Use bcrypt-aware comparison
+          if (passwordChanged(existing, sourcePlainPasswords[docId])) {
+            diffs[k] = { from: existing.password_hash ? '(existing hash)' : (existing.password ? '(plain text)' : '(none)'),
+                        to: '(new hash)' };
+            any = true;
+          }
+        } else {
+          if (diffField(existing[k], target[k])) {
+            diffs[k] = { from: existing[k], to: target[k] };
+            any = true;
+          }
+        }
+      }
+      // Also flag if there's a legacy 'password' field that should be removed
+      if (existing.password !== undefined && existing.password !== null) {
+        diffs['password'] = { from: existing.password, to: '(will be removed)' };
+        any = true;
+      }
+      userPlan.push({ docId, action: any ? 'update' : 'same', target, existing, diffs });
+    }
+  }
+  const orphans = Object.keys(currentUsers).filter(id => !targetUsers[id]);
+
+  const storePlan = [];
+  for (const docId of Object.keys(targetStores)) {
+    const target = targetStores[docId];
+    const existing = currentStores[docId];
+    if (!existing) {
+      storePlan.push({ docId, action: 'add', target, existing: null });
+    } else {
+      const diffs = {};
+      let any = false;
+      for (const k of Object.keys(target)) {
+        if (diffField(existing[k], target[k])) { diffs[k] = { from: existing[k], to: target[k] }; any = true; }
+      }
+      storePlan.push({ docId, action: any ? 'update' : 'same', target, existing, diffs });
+    }
+  }
+  const storeOrphans = Object.keys(currentStores).filter(id => !targetStores[id]);
+
+  plan = { userPlan, orphans, storePlan, storeOrphans };
+  renderPreview();
+}
+
+function renderPreview() {
+  // Summary stats
+  const stats = {
+    add:    plan.userPlan.filter(p => p.action === 'add').length,
+    update: plan.userPlan.filter(p => p.action === 'update').length,
+    same:   plan.userPlan.filter(p => p.action === 'same').length,
+    orphan: plan.orphans.length,
+  };
+  const sStats = {
+    add:    plan.storePlan.filter(p => p.action === 'add').length,
+    update: plan.storePlan.filter(p => p.action === 'update').length,
+    same:   plan.storePlan.filter(p => p.action === 'same').length,
+  };
+
+  document.getElementById('summaryStats').innerHTML = `
+    <div class="summary-stat"><div class="num" style="color:#16a34a">${stats.add + sStats.add}</div><div class="lbl">Will be added</div></div>
+    <div class="summary-stat"><div class="num" style="color:#d97706">${stats.update + sStats.update}</div><div class="lbl">Will be updated</div></div>
+    <div class="summary-stat"><div class="num" style="color:#6b7280">${stats.same + sStats.same}</div><div class="lbl">Already correct</div></div>
+    <div class="summary-stat"><div class="num" style="color:#dc2626">${stats.orphan}</div><div class="lbl">Orphan users</div></div>
+  `;
+
+  // Users table
+  document.getElementById('usersDiff').innerHTML = renderTable(plan.userPlan, 'user');
+  document.getElementById('storesDiff').innerHTML = renderTable(plan.storePlan, 'store');
+
+  // Orphans
+  if (plan.orphans.length) {
+    let html = '<table><tr><th>Doc ID</th><th>Stored fields</th></tr>';
+    for (const id of plan.orphans) {
+      const d = currentUsers[id];
+      html += '<tr><td class="mono">' + esc(id) + '</td><td>' +
+              'username=' + esc(d.username) + ', password=' + esc(d.password) +
+              ', role=' + esc(d.role) + ', store_id=' + esc(d.store_id) + '</td></tr>';
+    }
+    html += '</table>';
+    document.getElementById('orphansList').innerHTML = html;
+    document.getElementById('orphanSection').style.display = 'block';
+  } else {
+    document.getElementById('orphanSection').style.display = 'none';
+  }
+}
+
+function renderTable(items, kind) {
+  if (kind === 'user') {
+    let html = '<table><tr><th>Action</th><th>Doc ID</th><th>username</th><th>password</th><th>role</th><th>store_id</th><th>email</th></tr>';
+    for (const p of items) {
+      const t = p.target, e = p.existing || {};
+      const cell = (k) => {
+        const isDiff = p.action === 'update' && p.diffs && p.diffs[k];
+        if (isDiff) {
+          return '<td class="mono diff"><s style="color:#9ca3af">' + esc(p.diffs[k].from) + '</s> → <strong>' + esc(p.diffs[k].to) + '</strong></td>';
+        }
+        return '<td class="mono">' + esc(t[k]) + '</td>';
+      };
+      const badge = '<span class="badge b-' + p.action + '">' + p.action + '</span>';
+      html += '<tr>'
+            + '<td>' + badge + '</td>'
+            + '<td class="mono"><strong>' + esc(p.docId) + '</strong></td>'
+            + cell('username')
+            + cell('password')
+            + cell('role')
+            + cell('store_id')
+            + cell('email')
+            + '</tr>';
+    }
+    html += '</table>';
+    return html;
+  } else {
+    let html = '<table><tr><th>Action</th><th>Store ID</th><th>name</th><th>email</th><th>active</th></tr>';
+    for (const p of items) {
+      const t = p.target;
+      const cell = (k) => {
+        const isDiff = p.action === 'update' && p.diffs && p.diffs[k];
+        if (isDiff) {
+          return '<td class="mono diff"><s style="color:#9ca3af">' + esc(p.diffs[k].from) + '</s> → <strong>' + esc(p.diffs[k].to) + '</strong></td>';
+        }
+        return '<td class="mono">' + esc(t[k]) + '</td>';
+      };
+      html += '<tr>'
+            + '<td><span class="badge b-' + p.action + '">' + p.action + '</span></td>'
+            + '<td class="mono"><strong>' + esc(p.docId) + '</strong></td>'
+            + cell('name')
+            + cell('email')
+            + cell('active')
+            + '</tr>';
+    }
+    html += '</table>';
+    return html;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Step 3: Apply
+// ═══════════════════════════════════════════════════════════════════════════════
+window.applyChanges = async function() {
+  if (!plan) { alert('Load state first.'); return; }
+
+  const deleteOrphans = document.getElementById('deleteOrphans')?.checked || false;
+
+  if (!confirm('About to write changes to Firestore. Continue?')) return;
+
+  const btn = document.getElementById('btnApply');
+  btn.disabled = true; btn.textContent = 'Writing…';
+  const log = document.getElementById('applyLog');
+  log.style.display = 'block';
+  log.textContent = '';
+  const append = (msg) => { log.textContent += msg + '\n'; log.scrollTop = log.scrollHeight; };
+
+  try {
+    // Use a writeBatch for atomicity (max 500 ops; we're well under that)
+    const batch = writeBatch(db);
+    let ops = 0;
+
+    // Users — add or update
+    for (const p of plan.userPlan) {
+      if (p.action === 'add' || p.action === 'update') {
+        // If existing doc has a legacy plain-text 'password' field, remove it during the update.
+        // This finishes the migration from plain text to bcrypt hash.
+        const writeData = { ...p.target };
+        if (p.existing && p.existing.password !== undefined && p.existing.password !== null) {
+          writeData.password = deleteField();
+        }
+        batch.set(doc(db, 'users', p.docId), writeData, { merge: true });
+        append((p.action === 'add' ? '+ ADD    ' : '~ UPDATE ') + 'users/' + p.docId
+              + (writeData.password ? '  (legacy password field removed)' : ''));
+        ops++;
+      }
+    }
+    // Orphans
+    if (deleteOrphans) {
+      for (const id of plan.orphans) {
+        batch.delete(doc(db, 'users', id));
+        append('- DELETE users/' + id);
+        ops++;
+      }
+    } else if (plan.orphans.length) {
+      append('  (skipped ' + plan.orphans.length + ' orphan users — checkbox unchecked)');
+    }
+
+    // Stores — add or update
+    for (const p of plan.storePlan) {
+      if (p.action === 'add' || p.action === 'update') {
+        batch.set(doc(db, 'stores', p.docId), p.target, { merge: true });
+        append((p.action === 'add' ? '+ ADD    ' : '~ UPDATE ') + 'stores/' + p.docId);
+        ops++;
+      }
+    }
+
+    if (ops === 0) {
+      append('\n✓ Nothing to do — Firestore already matches the target.');
+      btn.disabled = false; btn.textContent = '✅ Apply all changes to Firestore';
+      return;
+    }
+
+    append('\nCommitting batch (' + ops + ' operations)…');
+    await batch.commit();
+    append('✅ Batch committed successfully.');
+    append('\n--- DONE ---');
+
+    document.getElementById('verifyCard').style.display = 'block';
+    document.getElementById('verifyCard').scrollIntoView({ behavior: 'smooth' });
+    btn.textContent = '✅ Already applied';
+  } catch (err) {
+    console.error(err);
+    append('\n❌ ERROR: ' + err.message);
+    append('Some operations may have failed. Re-read state and try again.');
+    btn.disabled = false; btn.textContent = '✅ Apply all changes to Firestore';
+  }
+};
+</script>
+
+</body>
+</html>
