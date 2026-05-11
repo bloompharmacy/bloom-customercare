@@ -1,0 +1,122 @@
+rules_version = '2';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Bloom Customer Care — Firestore Security Rules
+// Project: bloom-customercare
+// Updated: May 10, 2026
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// Auth model: Both apps (cc-index.html and cc-admin.html) sign in via
+//             Anonymous Auth at module load. So `request.auth != null` is the
+//             baseline check — it stops random people without a Firebase session.
+//
+// Trust model: Anyone with a browser can call signInAnonymously() and get
+//              past `request.auth != null`. So additional restrictions limit
+//              what an authed-but-anonymous client can do (especially: no reads
+//              of /users beyond the login flow's needs, no deletes anywhere).
+//
+// IMPORTANT: The seeder (seed-users-stores.html) needs WRITE access to /users
+//            and /stores. This ruleset BLOCKS those writes. To run the seeder:
+//              1. Temporarily change /users and /stores `allow write` to `if true`
+//              2. Run the seeder
+//              3. Restore the strict rules
+//            See bottom of file for the "seed mode" override block.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: must be authenticated (anonymous OK)
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    // Helper: validate ticket fields on create (defends against junk data)
+    function validTicketCreate() {
+      return request.resource.data.keys().hasAll(['ticket_id','store_id','name','phone','rating','review','status','created_at']) &&
+             request.resource.data.rating is int &&
+             request.resource.data.rating >= 1 &&
+             request.resource.data.rating <= 5 &&
+             request.resource.data.status == 'New' &&
+             request.resource.data.review.size() <= 5000 &&
+             request.resource.data.name.size() <= 200 &&
+             request.resource.data.phone.size() <= 30;
+    }
+
+    // ─── /users ────────────────────────────────────────────────────────────
+    // Login flow needs read access (both direct getDoc and the case-insensitive
+    // collection scan). All writes are blocked — only the seeder writes here,
+    // and the seeder needs the temporary unlock (see bottom).
+    match /users/{userId} {
+      allow read: if isAuthed();
+      allow write: if false;
+    }
+
+    // ─── /stores ───────────────────────────────────────────────────────────
+    // Reads: needed by cc-admin (branch dropdown) and cc-index (in transaction).
+    // Writes: cc-index increments ticket_counter via tx.set merge. We allow
+    //         writes but require they only touch ticket_counter — the email
+    //         and name fields stay locked down (only the seeder sets those).
+    match /stores/{storeId} {
+      allow read: if isAuthed();
+
+      // Allow updating ticket_counter only — protects email/name/active fields
+      allow update: if isAuthed() &&
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['ticket_counter']);
+
+      // No creates from the client (seeder only) and no deletes
+      allow create, delete: if false;
+    }
+
+    // ─── /tickets ──────────────────────────────────────────────────────────
+    // cc-index creates tickets; cc-admin reads + updates them.
+    // No deletes (audit trail).
+    match /tickets/{ticketId} {
+      allow read:   if isAuthed();
+      allow create: if isAuthed() && validTicketCreate();
+
+      // Updates allowed for:
+      //   - cc-admin: status, notes, last_updated (manager workflow)
+      //   - cc-index: photos (after Cloudinary upload completes post-creation)
+      allow update: if isAuthed() &&
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status','notes','last_updated','photos']);
+
+      allow delete: if false;
+    }
+
+    // ─── /logs ─────────────────────────────────────────────────────────────
+    // cc-index creates initial "Ticket Created" log; cc-admin reads + appends.
+    // Once written, logs are immutable (audit trail integrity).
+    match /logs/{logId} {
+      allow read:   if isAuthed();
+      allow create: if isAuthed() &&
+                       request.resource.data.keys().hasAll(['ticket_id','user','action','created_at']);
+      allow update, delete: if false;
+    }
+
+    // ─── /rate_limits ──────────────────────────────────────────────────────
+    // cc-index reads + writes its own phone-hash key. Short-lived (5 min TTL)
+    // so we allow full access for authed users.
+    match /rate_limits/{phoneHash} {
+      allow read, write: if isAuthed();
+    }
+
+    // ─── Catch-all: deny everything else ───────────────────────────────────
+    // Any future collection added by mistake won't be world-writable.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SEED MODE — uncomment ONLY when re-running seed-users-stores.html, then
+//             restore the strict rules immediately after.
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+//    match /users/{userId}   { allow read, write: if request.auth != null; }
+//    match /stores/{storeId} { allow read, write: if request.auth != null; }
+//
+// Or just temporarily change the strict rules above to `allow read, write: if true;`
+// for /users and /stores, run the seeder, then revert.
