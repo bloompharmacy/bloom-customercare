@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bloom — Resolution Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.datatables.net/1.13.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
+  <style>
+    :root{--bloom:#b22025;--bloom-dark:#8b191d;--bloom-light:#fdf2f2;--gold:#f1c40f;--surface:#ffffff;--bg:#f4f4f6;--border:rgba(0,0,0,0.08);--text:#1a1a2e;--muted:#6b7280;--success:#16a34a;--radius:12px;--shadow:0 2px 12px rgba(0,0,0,0.07);--font-head:'Sora',sans-serif;--font-body:'DM Sans',sans-serif;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);font-family:var(--font-body);color:var(--text);}
+    .hidden{display:none!important;}
+    .btn-bloom{background:var(--bloom);color:#fff;border:none;border-radius:8px;font-family:var(--font-body);font-weight:500;transition:background .2s,transform .1s;}
+    .btn-bloom:hover{background:var(--bloom-dark);color:#fff;}.btn-bloom:active{transform:scale(.97);}
+    .btn-outline-bloom{background:#fff;color:var(--bloom);border:1.5px solid var(--bloom);border-radius:8px;font-family:var(--font-body);font-weight:500;transition:all .2s;}
+    .btn-outline-bloom:hover{background:var(--bloom);color:#fff;}
+    #loginSection{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--bloom-dark) 0%,var(--bloom) 60%,#d94f2b 100%);}
+    .login-card{background:#fff;border-radius:20px;padding:44px 40px;width:380px;max-width:95vw;box-shadow:0 24px 64px rgba(0,0,0,0.25);animation:slideUp .5s cubic-bezier(.22,1,.36,1) both;}
+    @keyframes slideUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:none;}}
+    .login-card h2{font-family:var(--font-head);font-size:22px;text-align:center;margin-bottom:6px;}
+    .login-card p{color:var(--muted);font-size:13px;text-align:center;margin-bottom:28px;}
+    .form-label-sm{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px;display:block;}
+    .input-field{width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:10px;font-family:var(--font-body);font-size:14px;outline:none;transition:border .2s,box-shadow .2s;}
+    .input-field:focus{border-color:var(--bloom);box-shadow:0 0 0 3px rgba(178,32,37,.12);}
+    .btn-login{width:100%;padding:13px;background:var(--bloom);color:#fff;border:none;border-radius:10px;font-family:var(--font-head);font-size:15px;font-weight:600;cursor:pointer;transition:background .2s,transform .15s;margin-top:20px;}
+    .btn-login:hover{background:var(--bloom-dark);}.btn-login:active{transform:scale(.98);}
+    .login-error{color:var(--bloom);font-size:13px;text-align:center;margin-top:12px;min-height:18px;}
+    #dashSection{min-height:100vh;}
+    .top-nav{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--shadow);}
+    .brand{display:flex;align-items:center;gap:10px;}
+    .brand-name{font-family:var(--font-head);font-size:17px;font-weight:700;}.brand-sub{font-size:11px;color:var(--muted);line-height:1;}
+    .nav-actions{display:flex;gap:10px;}
+    .stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;padding:20px 28px 0;}
+    .stat-card{background:var(--surface);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);border-left:4px solid transparent;}
+    .stat-card.c-new{border-color:#6366f1;}.stat-card.c-review{border-color:#f59e0b;}.stat-card.c-progress{border-color:#3b82f6;}
+    .stat-card.c-resolved{border-color:#22c55e;}.stat-card.c-closed{border-color:#94a3b8;}.stat-card.c-total{border-color:var(--bloom);}
+    .stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;}
+    .stat-value{font-family:var(--font-head);font-size:26px;font-weight:700;color:var(--text);line-height:1.1;}
+    .filter-wrap{padding:16px 28px;}
+    .filter-panel{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;}
+    .filter-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;margin-bottom:14px;}
+    .filter-title{font-family:var(--font-head);font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;}
+    .filter-chevron{font-size:10px;transition:transform .25s;}.filter-chevron.open{transform:rotate(180deg);}
+    .filter-body{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
+    .filter-body.collapsed{display:none;}
+    .filter-group label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:5px;display:block;}
+    .filter-group .form-control,.filter-group .form-select{font-size:13px;border-radius:8px;border-color:#e5e7eb;}
+    .btn-reset{align-self:flex-end;background:none;border:1.5px solid var(--bloom);color:var(--bloom);border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s;white-space:nowrap;}
+    .btn-reset:hover{background:var(--bloom);color:#fff;}
+    .table-wrap{padding:0 28px 32px;}
+    .table-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+    .table-card-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+    .table-card-title{font-family:var(--font-head);font-size:15px;font-weight:600;}
+    #feedbackTable{width:100%!important;border-collapse:separate;border-spacing:0;}
+    #feedbackTable thead th{background:var(--bloom);color:#fff;font-family:var(--font-head);font-size:12px;letter-spacing:.05em;text-transform:uppercase;padding:13px 14px;border:none;white-space:nowrap;}
+    #feedbackTable tbody tr{transition:background .15s;}
+    #feedbackTable tbody tr:hover{background:var(--bloom-light);}
+    #feedbackTable tbody td{padding:12px 14px;border-bottom:1px solid #f0f0f4;vertical-align:middle;font-size:13px;}
+    #feedbackTable tbody tr.st-Resolved td{background:#f0fdf4;}
+    #feedbackTable tbody tr.st-Closed td{background:#f8fafc;opacity:.75;}
+    div.dataTables_info,div.dataTables_paginate{padding:12px 20px;font-size:13px;color:var(--muted);}
+    div.dataTables_paginate .paginate_button.current,div.dataTables_paginate .paginate_button.current:hover{background:var(--bloom)!important;color:#fff!important;border-color:var(--bloom)!important;border-radius:6px;}
+    div.dataTables_paginate .paginate_button:hover{background:var(--bloom-light)!important;color:var(--bloom)!important;border-radius:6px;}
+    .review-cell{width:200px;min-width:180px;max-width:220px;word-break:break-word;white-space:normal;overflow:hidden;}
+    .review-short{display:inline;}.review-full{display:none;}
+    .review-toggle{display:block;color:var(--bloom);font-size:11px;cursor:pointer;text-decoration:underline;margin-top:4px;}
+    .star-badge{display:inline-flex;align-items:center;gap:3px;font-weight:600;}
+    .star-badge.r1,.star-badge.r2{color:#ef4444;}.star-badge.r3{color:#f59e0b;}.star-badge.r4,.star-badge.r5{color:#22c55e;}
+    .status-select{font-size:12px;border-radius:8px;border-color:#e5e7eb;min-width:130px;}
+    .notes-field{font-size:12px;border-radius:8px;border-color:#e5e7eb;min-width:120px;resize:none;}
+    @media(max-width:768px){.top-nav{padding:12px 16px;}.stats-bar,.filter-wrap,.table-wrap{padding-left:16px;padding-right:16px;}.table-card{overflow-x:auto;}}
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginSection">
+  <div class="login-card">
+    <img src="bloom-logo.png" alt="Bloom Pharmacy"
+         style="width:80px;height:80px;object-fit:contain;display:block;margin:0 auto 20px;"
+         onerror="this.onerror=null; this.src='bloom-logo.jpg';">
+    <h2>Welcome back</h2>
+    <p>Sign in to the Bloom Resolution Dashboard</p>
+    <form id="loginForm" onsubmit="event.preventDefault(); doAuth();">
+      <label class="form-label-sm">Username</label>
+      <input type="text" id="u" class="input-field mb-3" placeholder="your.username" autocomplete="username">
+      <label class="form-label-sm">Password</label>
+      <input type="password" id="p" class="input-field" placeholder="••••••••" autocomplete="current-password">
+      <button type="submit" id="loginBtn" class="btn-login">Sign In</button>
+    </form>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashSection" class="hidden">
+  <nav class="top-nav">
+    <div class="brand">
+      <img src="bloom-logo.png" alt="Bloom Pharmacy"
+           style="width:40px;height:40px;object-fit:contain;"
+           onerror="this.onerror=null; this.src='bloom-logo.jpg';">
+      <div><div class="brand-name">Bloom Pharmacy</div><div class="brand-sub">Resolution Dashboard</div></div>
+    </div>
+    <div class="nav-actions">
+      <button class="btn btn-sm btn-outline-success" onclick="exportToExcel()">⬇ Export Excel</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="doLogout()">Sign out</button>
+    </div>
+  </nav>
+
+  <div class="stats-bar">
+    <div class="stat-card c-total"><div class="stat-label">Total</div><div class="stat-value" id="st-total">—</div></div>
+    <div class="stat-card c-new"><div class="stat-label">New</div><div class="stat-value" id="st-new">—</div></div>
+    <div class="stat-card c-review"><div class="stat-label">Under Review</div><div class="stat-value" id="st-review">—</div></div>
+    <div class="stat-card c-progress"><div class="stat-label">In Progress</div><div class="stat-value" id="st-progress">—</div></div>
+    <div class="stat-card c-resolved"><div class="stat-label">Resolved</div><div class="stat-value" id="st-resolved">—</div></div>
+    <div class="stat-card c-closed"><div class="stat-label">Closed</div><div class="stat-value" id="st-closed">—</div></div>
+  </div>
+
+  <div class="filter-wrap">
+    <div class="filter-panel">
+      <div class="filter-header" onclick="toggleFilters()">
+        <span class="filter-title">🔍 Filters</span>
+        <span class="filter-chevron open" id="filterChevron">▼</span>
+      </div>
+      <div class="filter-body" id="filterBody">
+        <div class="filter-group"><label>Ticket #</label><input type="text" id="fTicket" class="form-control form-control-sm" placeholder="e.g. WN01-3"></div>
+        <div class="filter-group" id="branchWrap">
+          <label>Branch</label>
+          <select id="fBranch" class="form-select form-select-sm">
+            <option value="">All Branches</option>
+            <option value="WN01">Wadi Al Nile</option><option value="P902">Point 90</option>
+            <option value="CA03">Capital</option><option value="AL04">Almaza</option>
+            <option value="MO05">Mall of Arabia</option><option value="UP06">Uptown</option>
+            <option value="S307">Street 31</option><option value="DP08">Diplo</option>
+            <option value="OS05">Online Store</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Status</label>
+          <select id="fStatus" class="form-select form-select-sm">
+            <option value="">All Status</option><option>New</option><option>Under Review</option>
+            <option>In Progress</option><option>Resolved</option><option>Closed</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Rating</label>
+          <select id="fRating" class="form-select form-select-sm">
+            <option value="">All Ratings</option><option value="1">1 ★</option><option value="2">2 ★★</option>
+            <option value="3">3 ★★★</option><option value="4">4 ★★★★</option><option value="5">5 ★★★★★</option>
+          </select>
+        </div>
+        <div class="filter-group"><label>Date From</label><input type="date" id="dateFrom" class="form-control form-control-sm"></div>
+        <div class="filter-group"><label>Date To</label><input type="date" id="dateTo" class="form-control form-control-sm"></div>
+        <div class="filter-group" style="display:flex;align-items:flex-end;"><button class="btn-reset" onclick="resetFilters()">Reset</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-card">
+      <div class="table-card-header">
+        <span class="table-card-title">Feedback Records</span>
+        <span id="rowCount" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="feedbackTable" class="table w-100 mb-0">
+          <thead><tr>
+            <th>Ticket #</th><th>Date</th><th>Store</th><th>Customer</th>
+            <th>Rating</th><th>Review</th><th>Photos</th><th>Notes</th><th>Status</th><th>Action</th>
+          </tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AUDIT LOG MODAL -->
+<div id="logModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;width:min(600px,96vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.25);">
+    <div style="padding:18px 22px;border-bottom:1px solid #f0f0f4;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-family:var(--font-head);font-weight:700;font-size:15px;">Activity Log</div>
+        <div id="logModalTicket" style="font-size:12px;color:var(--muted);font-family:monospace;margin-top:2px;"></div>
+      </div>
+      <button onclick="closeLogModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;">&times;</button>
+    </div>
+    <div id="logModalBody" style="overflow-y:auto;padding:18px 22px;flex:1;"></div>
+  </div>
+</div>
+
+<!-- PHOTO LIGHTBOX -->
+<div id="lightbox" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;cursor:zoom-out;" onclick="closeLightbox()">
+  <img id="lightboxImg" src="" alt="" style="max-width:94vw;max-height:94vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+  <button onclick="closeLightbox()" style="position:absolute;top:20px;right:24px;background:rgba(255,255,255,0.1);color:#fff;border:none;width:44px;height:44px;border-radius:50%;font-size:24px;cursor:pointer;line-height:1;">&times;</button>
+</div>
+
+<!-- PHOTO GALLERY MODAL (per-ticket) -->
+<div id="galleryModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;width:min(720px,96vw);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.3);">
+    <div style="padding:16px 22px;border-bottom:1px solid #f0f0f4;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-family:var(--font-head);font-weight:700;font-size:15px;">📷 Customer Photos</div>
+        <div id="galleryTicket" style="font-size:12px;color:var(--muted);font-family:monospace;margin-top:2px;"></div>
+      </div>
+      <button onclick="closeGallery()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;">&times;</button>
+    </div>
+    <div id="galleryMain" style="background:#1a1a2e;padding:14px;display:flex;align-items:center;justify-content:center;min-height:300px;max-height:55vh;">
+      <img id="galleryMainImg" src="" alt="" style="max-width:100%;max-height:55vh;border-radius:6px;cursor:zoom-in;" onclick="openLightbox(this.src)">
+    </div>
+    <div id="galleryThumbs" style="padding:14px 22px;display:flex;gap:8px;overflow-x:auto;flex-wrap:nowrap;"></div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.5/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit,
+         updateDoc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const app = initializeApp({
+  apiKey:"AIzaSyCccdLw-wMiy4YahpU8lq6PxJJoDra1g5s",
+  authDomain:"bloom-customercare.firebaseapp.com",
+  projectId:"bloom-customercare",
+  storageBucket:"bloom-customercare.firebasestorage.app",
+  messagingSenderId:"925494560966",
+  appId:"1:925494560966:web:2c8bfadbc125f0f6ae2fc7"
+});
+const db   = getFirestore(app);
+const auth = getAuth(app);
+await signInAnonymously(auth);
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let table      = null;
+let _session   = null;
+let _allTickets = [];   // cache for current dataset (used by photo gallery)
+const STATS    = ['New','Under Review','In Progress','Resolved','Closed'];
+
+function esc(str) {
+  if (!str && str !== 0) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── Session storage helpers (localStorage with 30-day expiry) ─────────────────
+const SESSION_KEY    = 'bloomCCAdmin';
+const SESSION_MAX_MS = 30 * 24 * 60 * 60 * 1000;  // 30 days
+
+function loadSession() {
+  // Try localStorage first (new format with expiry), fall back to sessionStorage (old format)
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (raw) {
+      const obj = JSON.parse(raw);
+      if (obj && obj.user && obj.savedAt && (Date.now() - obj.savedAt) < SESSION_MAX_MS) {
+        return obj.user;
+      }
+      // Expired — clean up
+      localStorage.removeItem(SESSION_KEY);
+    }
+    // Legacy: someone still has a sessionStorage entry from before this update
+    const legacy = sessionStorage.getItem(SESSION_KEY);
+    if (legacy) {
+      sessionStorage.removeItem(SESSION_KEY);
+      return JSON.parse(legacy);
+    }
+  } catch(_) { /* corrupt data — ignore */ }
+  return null;
+}
+
+function saveSession(user) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ user, savedAt: Date.now() }));
+}
+
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(SESSION_KEY);  // belt and suspenders
+}
+
+// ── Session restore ────────────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  console.log('[Bloom CC] Build: 2026-05-12 with persistent 30-day session');
+  const saved = loadSession();
+  if (saved) {
+    console.log('[Bloom CC] Restored session for:', saved.username);
+    _session = saved;
+    if (_session) { showDash(); await loadData(); }
+  } else {
+    console.log('[Bloom CC] No active session — showing login');
+  }
+  document.getElementById('logModal').addEventListener('click', e => { if (e.target === document.getElementById('logModal')) closeLogModal(); });
+  document.getElementById('galleryModal').addEventListener('click', e => { if (e.target === document.getElementById('galleryModal')) closeGallery(); });
+});
+
+// ── Auth ───────────────────────────────────────────────────────────────────────
+window.doAuth = async function() {
+  const uRaw = document.getElementById('u').value.trim();
+  const p    = document.getElementById('p').value.trim();
+  document.getElementById('loginError').textContent = '';
+  if (!uRaw || !p) return;
+
+  const setBusy = (busy) => {
+    document.getElementById('loginBtn').disabled    = busy;
+    document.getElementById('loginBtn').textContent = busy ? 'Signing in…' : 'Sign In';
+  };
+  setBusy(true);
+
+  try {
+    // Try multiple case variants of the username because Firestore doc IDs are case-sensitive.
+    // The seed used various cases (e.g. "M.saad", "a.saeid") so we attempt all common variants.
+    const tried = new Set();
+    const variants = [uRaw, uRaw.toLowerCase(), uRaw.toUpperCase(),
+                      uRaw.charAt(0).toUpperCase() + uRaw.slice(1).toLowerCase(),
+                      uRaw.charAt(0).toLowerCase() + uRaw.slice(1)];
+
+    let foundSnap = null;
+    for (const v of variants) {
+      if (tried.has(v)) continue;
+      tried.add(v);
+      const snap = await getDoc(doc(db, 'users', v));
+      if (snap.exists()) { foundSnap = snap; break; }
+    }
+
+    // Fallback: scan the users collection for a case-insensitive match on the username field.
+    if (!foundSnap) {
+      const all = await getDocs(collection(db, 'users'));
+      const target = uRaw.toLowerCase();
+      for (const d of all.docs) {
+        const data = d.data();
+        if ((d.id || '').toLowerCase() === target ||
+            (data.username || '').toLowerCase() === target) {
+          foundSnap = d;
+          break;
+        }
+      }
+    }
+
+    if (!foundSnap) {
+      setBusy(false);
+      document.getElementById('loginError').textContent = 'Incorrect username or password.';
+      return;
+    }
+
+    // Verify password — support BOTH bcrypt hash (preferred) and plain text (legacy fallback).
+    // After full migration via hash-passwords.html, only the bcrypt branch is hit.
+    const userData = foundSnap.data();
+    let passwordOk = false;
+    if (userData.password_hash) {
+      // Modern: bcrypt verification (one-way, can't be reversed even from a DB dump)
+      const bcryptLib = (typeof bcrypt !== 'undefined') ? bcrypt
+                      : (typeof dcodeIO !== 'undefined' && dcodeIO.bcrypt) ? dcodeIO.bcrypt
+                      : null;
+      if (!bcryptLib) {
+        console.error('bcryptjs library failed to load — cannot verify hashed password');
+        setBusy(false);
+        document.getElementById('loginError').textContent = 'Login service unavailable. Please refresh the page.';
+        return;
+      }
+      try {
+        passwordOk = bcryptLib.compareSync(p, userData.password_hash);
+      } catch(e) {
+        console.error('bcrypt compare failed:', e);
+        passwordOk = false;
+      }
+    } else if (userData.password !== undefined && userData.password !== null) {
+      // Legacy: plain-text comparison. Will be removed after migration is complete.
+      passwordOk = (userData.password === p);
+    }
+
+    if (!passwordOk) {
+      setBusy(false);
+      document.getElementById('loginError').textContent = 'Incorrect username or password.';
+      return;
+    }
+
+    // Don't store password fields in session
+    const sessionData = { ...userData };
+    delete sessionData.password;
+    delete sessionData.password_hash;
+
+    _session = sessionData;
+    saveSession(_session);
+    setBusy(false);
+    showDash();
+    await loadData();
+  } catch(err) {
+    console.error('Login error:', err);
+    setBusy(false);
+    document.getElementById('loginError').textContent = 'Connection error. Please try again.';
+  }
+};
+
+function showDash() {
+  document.getElementById('loginSection').classList.add('hidden');
+  document.getElementById('dashSection').classList.remove('hidden');
+  if (_session.role === 'manager') document.getElementById('branchWrap').style.display = 'none';
+}
+
+// ── Load data — no orderBy to avoid composite index requirement ────────────────
+window.loadData = async function() {
+  $('#tableBody').html('<tr><td colspan="9" class="text-center py-4 text-muted">Loading…</td></tr>');
+  try {
+    let snap;
+    if (_session.role === 'admin') {
+      snap = await getDocs(query(collection(db, 'tickets'), limit(500)));
+    } else {
+      snap = await getDocs(query(collection(db, 'tickets'), where('store_id','==',_session.store_id)));
+    }
+
+    if (snap.empty) {
+      $('#tableBody').html('<tr><td colspan="9" class="text-center py-4 text-muted">No records found.</td></tr>');
+      ['total','new','review','progress','resolved','closed'].forEach(k => $('#st-'+k).text('0'));
+      if (table) { table.destroy(); table = null; }
+      return;
+    }
+
+    const data = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    // Sort newest first client-side (avoids composite index)
+    data.sort((a,b) => {
+      const ta = a.created_at?.toDate ? a.created_at.toDate().getTime() : 0;
+      const tb = b.created_at?.toDate ? b.created_at.toDate().getTime() : 0;
+      return tb - ta;
+    });
+    _allTickets = data;   // accessible to openPhotoGallery
+    renderData(data);
+  } catch(err) {
+    $('#tableBody').html('<tr><td colspan="10" class="text-center py-4 text-danger">Failed to load: '+esc(err.message)+'</td></tr>');
+  }
+};
+
+function renderData(data) {
+  const counts = {'New':0,'Under Review':0,'In Progress':0,'Resolved':0,'Closed':0};
+  data.forEach(r => { if (counts[r.status]!==undefined) counts[r.status]++; });
+  $('#st-total').text(data.length);
+  $('#st-new').text(counts['New']);
+  $('#st-review').text(counts['Under Review']);
+  $('#st-progress').text(counts['In Progress']);
+  $('#st-resolved').text(counts['Resolved']);
+  $('#st-closed').text(counts['Closed']);
+
+  const html = data.map(r => {
+    const rating = parseInt(r.rating,10) || 0;
+    const stars  = '★'.repeat(rating)+'☆'.repeat(5-rating);
+    const tsDate = r.created_at?.toDate ? r.created_at.toDate() : null;
+    const tsMs   = tsDate ? tsDate.getTime() : 0;          // numeric for sorting + filtering
+    const ts     = tsDate ? tsDate.toLocaleString() : '';  // human-readable for display
+    const phone  = r.phone ? '<a href="tel:'+esc(r.phone)+'" style="color:inherit">'+esc(r.phone)+'</a>' : '—';
+    const email  = r.email ? '<br><a href="mailto:'+esc(r.email)+'" style="font-size:11px;color:var(--muted)">'+esc(r.email)+'</a>' : '';
+    const full   = esc(r.review||'');
+    const short  = full.length>120 ? full.substring(0,120)+'…' : full;
+    const rev    = full.length>120
+      ? '<span class="review-short" id="rs-'+r.id+'">'+short+'</span><span class="review-full" id="rf-'+r.id+'">'+full+'</span><br><span class="review-toggle" onclick="toggleReview(\''+r.id+'\')">Show more</span>'
+      : '<span>'+full+'</span>';
+    const opts   = STATS.map(o=>'<option value="'+o+'" '+(r.status===o?'selected':'')+'>'+o+'</option>').join('');
+    const sc     = r.status==='Resolved'?'st-Resolved':r.status==='Closed'?'st-Closed':'';
+
+    // Photos column — View button if any photos exist, dash otherwise.
+    // Clicking opens a gallery modal scoped to this ticket.
+    const photoCount = (Array.isArray(r.photos) ? r.photos.length : 0);
+    let photoCell = '<span style="color:var(--muted);font-size:13px">—</span>';
+    if (photoCount > 0) {
+      photoCell = '<button type="button" class="btn btn-sm btn-outline-bloom" '+
+                  'onclick="openPhotoGallery(\''+r.id+'\')" '+
+                  'title="View attached photos" '+
+                  'style="white-space:nowrap;font-size:12px;padding:4px 10px;">'+
+                    '📷 View ('+photoCount+')'+
+                  '</button>';
+    }
+
+    return '<tr class="'+sc+'" data-id="'+r.id+'" data-rating="'+rating+'" data-store="'+esc(r.store_id)+'" data-ts="'+ts+'" data-ts-ms="'+tsMs+'">' +
+      '<td><span class="badge bg-dark" style="font-family:monospace;font-size:11px">'+esc(r.ticket_id)+'</span></td>' +
+      '<td data-order="'+tsMs+'" style="white-space:nowrap;font-size:12px;color:var(--muted)">'+ts+'</td>' +
+      '<td><strong style="font-size:13px">'+esc(r.store_name)+'</strong><br><span style="font-size:11px;color:var(--muted)">'+esc(r.store_id)+'</span></td>' +
+      '<td><strong>'+esc(r.name)+'</strong><br><small>'+phone+email+'</small></td>' +
+      '<td style="white-space:nowrap"><span class="star-badge r'+rating+'">'+stars+' '+rating+'</span></td>' +
+      '<td><div class="review-cell" style="font-size:12px;">'+rev+'</div></td>' +
+      '<td style="text-align:center">'+photoCell+'</td>' +
+      '<td><textarea id="note-'+r.id+'" class="form-control notes-field" rows="2">'+esc(r.notes||'')+'</textarea></td>' +
+      '<td><select id="stat-'+r.id+'" class="form-select status-select">'+opts+'</select></td>' +
+      '<td style="white-space:nowrap"><button onclick="saveRow(\''+r.id+'\',\''+esc(r.ticket_id)+'\',this)" class="btn btn-sm btn-bloom">Save</button> <button onclick="showLogs(\''+esc(r.ticket_id)+'\')" class="btn btn-sm btn-outline-secondary" title="Activity log">📋</button></td>' +
+    '</tr>';
+  }).join('');
+
+  $('#tableBody').html(html);
+  initTable();
+}
+
+function initTable() {
+  if ($.fn.DataTable.isDataTable('#feedbackTable')) $('#feedbackTable').DataTable().destroy();
+  table = $('#feedbackTable').DataTable({
+    pageLength:25, dom:'rtip', order:[[1,'desc']],
+    language:{info:'Showing _START_–_END_ of _TOTAL_ records',paginate:{previous:'‹',next:'›'}},
+    drawCallback: function() {
+      const i = this.api().page.info();
+      $('#rowCount').text(i.recordsDisplay+' of '+i.recordsTotal+' records');
+    }
+  });
+
+  // Date filter — uses the machine-readable data-ts-ms (unix ms) on each row
+  if (!$.fn.dataTable.ext.search.some(f=>f._ccDate)) {
+    const f = function(settings, searchData, dataIndex) {
+      // Only apply this filter to OUR table (in case other DataTables exist on the page)
+      if (settings.nTable.id !== 'feedbackTable') return true;
+      const from = $('#dateFrom').val();
+      const to   = $('#dateTo').val();
+      if (!from && !to) return true;
+
+      const node = settings.aoData[dataIndex].nTr;
+      if (!node) return true;
+      const tsMs = parseInt(node.getAttribute('data-ts-ms'), 10);
+      if (!tsMs) return true;
+
+      // 'from' is a YYYY-MM-DD string. new Date('YYYY-MM-DD') parses as UTC midnight.
+      // To compare against a local-timezone tsMs, build local-midnight start/end-of-day.
+      if (from) {
+        const f0 = new Date(from + 'T00:00:00').getTime();
+        if (tsMs < f0) return false;
+      }
+      if (to) {
+        const t1 = new Date(to + 'T23:59:59.999').getTime();
+        if (tsMs > t1) return false;
+      }
+      return true;
+    };
+    f._ccDate = true;
+    $.fn.dataTable.ext.search.push(f);
+  }
+  // Rating filter
+  if (!$.fn.dataTable.ext.search.some(f=>f._ccRating)) {
+    const f = function(s,data,idx) {
+      const sel=$('#fRating').val(); if(!sel) return true;
+      const tr=table?table.row(idx).node():null; if(!tr) return true;
+      return $(tr).attr('data-rating')===sel;
+    };
+    f._ccRating=true; $.fn.dataTable.ext.search.push(f);
+  }
+  // Status filter
+  if (!$.fn.dataTable.ext.search.some(f=>f._ccStatus)) {
+    const f = function(s,data,idx) {
+      const sel=$('#fStatus').val(); if(!sel) return true;
+      const tr=table?table.row(idx).node():null; if(!tr) return true;
+      return $(tr).find('select[id^="stat-"]').val()===sel;
+    };
+    f._ccStatus=true; $.fn.dataTable.ext.search.push(f);
+  }
+  // Branch filter
+  if (!$.fn.dataTable.ext.search.some(f=>f._ccBranch)) {
+    const f = function(s,data,idx) {
+      const sel=$('#fBranch').val(); if(!sel) return true;
+      const tr=table?table.row(idx).node():null; if(!tr) return true;
+      return $(tr).attr('data-store')===sel;
+    };
+    f._ccBranch=true; $.fn.dataTable.ext.search.push(f);
+  }
+
+  $('#fTicket').off('keyup').on('keyup', function(){ table.column(0).search(this.value).draw(); });
+  $('#fBranch,#fStatus,#fRating').off('change').on('change', function(){ table.draw(); });
+  $('#dateFrom,#dateTo').off('change').on('change', function(){ table.draw(); });
+}
+
+// ── Save row ───────────────────────────────────────────────────────────────────
+window.saveRow = async function(docId, ticketId, btn) {
+  const status = $('#stat-'+docId).val();
+  const notes  = $('#note-'+docId).val();
+  $(btn).prop('disabled',true).text('…');
+  try {
+    const ref = doc(db,'tickets',docId);
+    const old = await getDoc(ref);
+    const oldData = old.exists() ? old.data() : {};
+
+    await updateDoc(ref, { status, notes, last_updated: serverTimestamp() });
+
+    const logBase = ticketId+'_'+Date.now();
+    if (oldData.status !== status) {
+      await setDoc(doc(db,'logs',logBase+'_s'), {
+        ticket_id:ticketId, user:_session.username,
+        action:'Status Changed', detail:oldData.status+' → '+status,
+        created_at:serverTimestamp()
+      });
+    }
+    if (notes && notes !== (oldData.notes||'')) {
+      await setDoc(doc(db,'logs',logBase+'_n'), {
+        ticket_id:ticketId, user:_session.username,
+        action: oldData.notes ? 'Note Updated' : 'Note Added', detail:notes,
+        created_at:serverTimestamp()
+      });
+    }
+
+    $(btn).prop('disabled',false).text('Save');
+    Swal.fire({text:'Updated successfully',icon:'success',timer:1200,showConfirmButton:false});
+    const tr=$(btn).closest('tr');
+    tr.removeClass('st-Resolved st-Closed');
+    if(status==='Resolved') tr.addClass('st-Resolved');
+    if(status==='Closed')   tr.addClass('st-Closed');
+  } catch(err) {
+    $(btn).prop('disabled',false).text('Save');
+    Swal.fire({text:'Save failed: '+err.message,icon:'error'});
+  }
+};
+
+// ── Show logs — simple query without orderBy (no index needed) ─────────────────
+window.showLogs = async function(ticketId) {
+  document.getElementById('logModalTicket').textContent = ticketId;
+  document.getElementById('logModal').style.display = 'flex';
+  const body = document.getElementById('logModalBody');
+  body.innerHTML = '<div class="text-center text-muted py-4">Loading…</div>';
+  try {
+    const snap = await getDocs(query(collection(db,'logs'), where('ticket_id','==',ticketId)));
+    const logs = snap.docs.map(d=>d.data()).sort((a,b)=>{
+      const ta=a.created_at?.toDate?a.created_at.toDate().getTime():0;
+      const tb=b.created_at?.toDate?b.created_at.toDate().getTime():0;
+      return ta-tb;
+    });
+    if (!logs.length) {
+      body.innerHTML = '<div class="text-center text-muted py-4" style="font-size:13px;">No activity recorded yet for this ticket.</div>';
+      return;
+    }
+    body.innerHTML = '<div style="display:flex;flex-direction:column;">' + logs.map(log => {
+      const ts = log.created_at?.toDate ? log.created_at.toDate().toLocaleString() : '';
+      return '<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f0f0f4;">' +
+        '<div style="flex-shrink:0;width:8px;height:8px;background:var(--bloom);border-radius:50%;margin-top:5px;"></div>' +
+        '<div style="flex:1;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
+            '<span style="font-weight:600;font-size:13px;">'+esc(log.action)+'</span>' +
+            '<span style="font-size:11px;color:var(--muted);white-space:nowrap;">'+ts+'</span>' +
+          '</div>' +
+          '<div style="font-size:12px;color:var(--muted);margin-top:2px;">by <strong>'+esc(log.user)+'</strong></div>' +
+          (log.detail?'<div style="font-size:12px;margin-top:4px;background:#f8f9fa;padding:6px 10px;border-radius:6px;">'+esc(log.detail)+'</div>':'') +
+        '</div></div>';
+    }).join('') + '</div>';
+  } catch(err) {
+    body.innerHTML = '<div class="text-center text-danger py-4" style="font-size:13px;">Failed to load logs: '+esc(err.message)+'</div>';
+  }
+};
+
+window.closeLogModal = function() { document.getElementById('logModal').style.display='none'; };
+
+window.openLightbox = function(url) {
+  const lb = document.getElementById('lightbox');
+  document.getElementById('lightboxImg').src = url;
+  lb.style.display = 'flex';
+};
+window.closeLightbox = function() {
+  document.getElementById('lightbox').style.display = 'none';
+  document.getElementById('lightboxImg').src = '';
+};
+
+// Photo gallery — opens a modal scoped to one ticket showing all its photos
+// with a clickable thumbnail strip + main view that further opens to lightbox.
+window.openPhotoGallery = function(ticketId) {
+  // Find the ticket data from the current dataset
+  const ticket = _allTickets.find(t => t.id === ticketId);
+  if (!ticket || !Array.isArray(ticket.photos) || !ticket.photos.length) {
+    return;
+  }
+  document.getElementById('galleryTicket').textContent = ticket.ticket_id + ' • ' + ticket.photos.length + ' photo(s)';
+  // Render main image (first photo by default)
+  document.getElementById('galleryMainImg').src = ticket.photos[0].url;
+  // Render thumbnail strip
+  document.getElementById('galleryThumbs').innerHTML = ticket.photos.map((p, i) =>
+    '<img src="'+esc(p.thumb_url || p.url)+'" '+
+    'data-full="'+esc(p.url)+'" '+
+    'alt="thumb '+(i+1)+'" '+
+    'style="width:72px;height:72px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid '+(i===0?'var(--bloom)':'transparent')+';flex-shrink:0;" '+
+    'onclick="selectGalleryPhoto(this, \''+esc(p.url)+'\')">'
+  ).join('');
+  document.getElementById('galleryModal').style.display = 'flex';
+};
+window.selectGalleryPhoto = function(thumbEl, url) {
+  document.getElementById('galleryMainImg').src = url;
+  // Update border highlighting on the active thumbnail
+  document.querySelectorAll('#galleryThumbs img').forEach(img => img.style.border = '2px solid transparent');
+  thumbEl.style.border = '2px solid var(--bloom)';
+};
+window.closeGallery = function() {
+  document.getElementById('galleryModal').style.display = 'none';
+  document.getElementById('galleryMainImg').src = '';
+  document.getElementById('galleryThumbs').innerHTML = '';
+};
+
+window.toggleReview = function(id) {
+  const rs=document.getElementById('rs-'+id),rf=document.getElementById('rf-'+id);
+  const btn=rs.parentElement.querySelector('.review-toggle');
+  const exp=rf.style.display==='inline';
+  rs.style.display=exp?'inline':'none'; rf.style.display=exp?'none':'inline';
+  btn.textContent=exp?'Show more':'Show less';
+};
+
+window.resetFilters = function() {
+  $('#fTicket').val(''); $('#fBranch,#fStatus,#fRating').val(''); $('#dateFrom,#dateTo').val('');
+  if(table) table.search('').columns().search('').draw();
+};
+
+window.toggleFilters = function() {
+  const b=document.getElementById('filterBody'),c=document.getElementById('filterChevron');
+  const open=!b.classList.contains('collapsed');
+  b.classList.toggle('collapsed',open); c.classList.toggle('open',!open);
+};
+
+window.exportToExcel = function() {
+  if(!table) return;
+  const rows=table.rows({filter:'applied'}).nodes().toArray();
+  const data=rows.map(tr=>{
+    const id=$(tr).data('id');
+    const cells=$(tr).find('td');
+    const ticket = _allTickets.find(t => t.id === id);
+    const photoCount = (ticket && Array.isArray(ticket.photos)) ? ticket.photos.length : 0;
+    const photoUrls  = (ticket && Array.isArray(ticket.photos))
+      ? ticket.photos.map(p => p.url).join(' | ')
+      : '';
+    return {
+      'Ticket':   cells.eq(0).find('.badge').text().trim(),
+      'Date':     cells.eq(1).text().trim(),
+      'Store':    cells.eq(2).find('strong').text().trim(),
+      'Store ID': cells.eq(2).find('span').text().trim(),
+      'Name':     cells.eq(3).find('strong').text().trim(),
+      'Phone':    cells.eq(3).find('a[href^="tel"]').text().trim(),
+      'Email':    cells.eq(3).find('a[href^="mailto"]').text().trim(),
+      'Rating':   cells.eq(4).text().replace(/[★☆\s]/g,'').trim(),
+      'Review':   cells.eq(5).text().trim(),
+      'Photos':   photoCount,
+      'Photo URLs': photoUrls,
+      'Notes':    $('#note-'+id).val()||'',
+      'Status':   $('#stat-'+id).val()||''
+    };
+  });
+  if(!data.length) return Swal.fire({text:'No data to export.',icon:'info'});
+  const ws=XLSX.utils.json_to_sheet(data);
+  ws['!cols']=Object.keys(data[0]).map(k=>({wch:Math.max(k.length,...data.map(r=>String(r[k]||'').length))+2}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Bloom Feedback');
+  XLSX.writeFile(wb,'Bloom_CC_'+new Date().toISOString().slice(0,10)+'.xlsx');
+};
+
+window.doLogout = function() {
+  clearSession();
+  _session=null;
+  if(table){table.destroy();table=null;}
+  $('#tableBody').html('');
+  document.getElementById('dashSection').classList.add('hidden');
+  document.getElementById('loginSection').classList.remove('hidden');
+  document.getElementById('u').value=''; document.getElementById('p').value='';
+  document.getElementById('loginError').textContent='';
+};
+</script>
+</body>
+</html>
