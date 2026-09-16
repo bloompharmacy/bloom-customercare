@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bloom — Resolution Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.datatables.net/1.13.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
+  <style>
+    :root{--bloom:#b22025;--bloom-dark:#8b191d;--bloom-light:#fdf2f2;--gold:#f1c40f;--surface:#ffffff;--bg:#f4f4f6;--border:rgba(0,0,0,0.08);--text:#1a1a2e;--muted:#6b7280;--success:#16a34a;--radius:12px;--shadow:0 2px 12px rgba(0,0,0,0.07);--font-head:'Sora',sans-serif;--font-body:'DM Sans',sans-serif;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);font-family:var(--font-body);color:var(--text);}
+    .hidden{display:none!important;}
+    .btn-bloom{background:var(--bloom);color:#fff;border:none;border-radius:8px;font-family:var(--font-body);font-weight:500;transition:background .2s,transform .1s;}
+    .btn-bloom:hover{background:var(--bloom-dark);color:#fff;}.btn-bloom:active{transform:scale(.97);}
+    .btn-outline-bloom{background:#fff;color:var(--bloom);border:1.5px solid var(--bloom);border-radius:8px;font-family:var(--font-body);font-weight:500;transition:all .2s;}
+    .btn-outline-bloom:hover{background:var(--bloom);color:#fff;}
+    #loginSection{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--bloom-dark) 0%,var(--bloom) 60%,#d94f2b 100%);}
+    .login-card{background:#fff;border-radius:20px;padding:44px 40px;width:380px;max-width:95vw;box-shadow:0 24px 64px rgba(0,0,0,0.25);animation:slideUp .5s cubic-bezier(.22,1,.36,1) both;}
+    @keyframes slideUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:none;}}
+    .login-card h2{font-family:var(--font-head);font-size:22px;text-align:center;margin-bottom:6px;}
+    .login-card p{color:var(--muted);font-size:13px;text-align:center;margin-bottom:28px;}
+    .form-label-sm{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px;display:block;}
+    .input-field{width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:10px;font-family:var(--font-body);font-size:14px;outline:none;transition:border .2s,box-shadow .2s;}
+    .input-field:focus{border-color:var(--bloom);box-shadow:0 0 0 3px rgba(178,32,37,.12);}
+    .btn-login{width:100%;padding:13px;background:var(--bloom);color:#fff;border:none;border-radius:10px;font-family:var(--font-head);font-size:15px;font-weight:600;cursor:pointer;transition:background .2s,transform .15s;margin-top:20px;}
+    .btn-login:hover{background:var(--bloom-dark);}.btn-login:active{transform:scale(.98);}
+    .login-error{color:var(--bloom);font-size:13px;text-align:center;margin-top:12px;min-height:18px;}
+    #dashSection{min-height:100vh;}
+    .top-nav{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--shadow);}
+    .brand{display:flex;align-items:center;gap:10px;}
+    .brand-name{font-family:var(--font-head);font-size:17px;font-weight:700;}.brand-sub{font-size:11px;color:var(--muted);line-height:1;}
+    .nav-actions{display:flex;gap:10px;}
+    .stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;padding:20px 28px 0;}
+    .stat-card{background:var(--surface);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);border-left:4px solid transparent;}
+    .stat-card.c-new{border-color:#6366f1;}.stat-card.c-review{border-color:#f59e0b;}.stat-card.c-progress{border-color:#3b82f6;}
+    .stat-card.c-resolved{border-color:#22c55e;}.stat-card.c-closed{border-color:#94a3b8;}.stat-card.c-total{border-color:var(--bloom);}
+    .stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;}
+    .stat-value{font-family:var(--font-head);font-size:26px;font-weight:700;color:var(--text);line-height:1.1;}
+    .filter-wrap{padding:16px 28px;}
+    .filter-panel{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;}
+    .filter-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;margin-bottom:14px;}
+    .filter-title{font-family:var(--font-head);font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;}
+    .filter-chevron{font-size:10px;transition:transform .25s;}.filter-chevron.open{transform:rotate(180deg);}
+    .filter-body{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
+    .filter-body.collapsed{display:none;}
+    .filter-group label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:5px;display:block;}
+    .filter-group .form-control,.filter-group .form-select{font-size:13px;border-radius:8px;border-color:#e5e7eb;}
+    .btn-reset{align-self:flex-end;background:none;border:1.5px solid var(--bloom);color:var(--bloom);border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s;white-space:nowrap;}
+    .btn-reset:hover{background:var(--bloom);color:#fff;}
+    .table-wrap{padding:0 28px 32px;}
+    .table-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+    .table-card-header{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+    .table-card-title{font-family:var(--font-head);font-size:15px;font-weight:600;}
+    #feedbackTable{width:100%!important;border-collapse:separate;border-spacing:0;}
+    #feedbackTable thead th{background:var(--bloom);color:#fff;font-family:var(--font-head);font-size:12px;letter-spacing:.05em;text-transform:uppercase;padding:13px 14px;border:none;white-space:nowrap;}
+    #feedbackTable tbody tr{transition:background .15s;}
+    #feedbackTable tbody tr:hover{background:var(--bloom-light);}
+    #feedbackTable tbody td{padding:12px 14px;border-bottom:1px solid #f0f0f4;vertical-align:middle;font-size:13px;}
+    #feedbackTable tbody tr.st-Resolved td{background:#f0fdf4;}
+    #feedbackTable tbody tr.st-Closed td{background:#f8fafc;opacity:.75;}
+    div.dataTables_info,div.dataTables_paginate{padding:12px 20px;font-size:13px;color:var(--muted);}
+    div.dataTables_paginate .paginate_button.current,div.dataTables_paginate .paginate_button.current:hover{background:var(--bloom)!important;color:#fff!important;border-color:var(--bloom)!important;border-radius:6px;}
+    div.dataTables_paginate .paginate_button:hover{background:var(--bloom-light)!important;color:var(--bloom)!important;border-radius:6px;}
+    .review-cell{width:200px;min-width:180px;max-width:220px;word-break:break-word;white-space:normal;overflow:hidden;}
+    .review-short{display:inline;}.review-full{display:none;}
+    .review-toggle{display:block;color:var(--bloom);font-size:11px;cursor:pointer;text-decoration:underline;margin-top:4px;}
+    .star-badge{display:inline-flex;align-items:center;gap:3px;font-weight:600;}
+    .star-badge.r1,.star-badge.r2{color:#ef4444;}.star-badge.r3{color:#f59e0b;}.star-badge.r4,.star-badge.r5{color:#22c55e;}
+    .status-select{font-size:12px;border-radius:8px;border-color:#e5e7eb;min-width:130px;}
+    .notes-field{font-size:12px;border-radius:8px;border-color:#e5e7eb;min-width:120px;resize:none;}
+    @media(max-width:768px){.top-nav{padding:12px 16px;}.stats-bar,.filter-wrap,.table-wrap{padding-left:16px;padding-right:16px;}.table-card{overflow-x:auto;}}
+    /* ══ Staff Evaluation feature (additive — matches existing tokens) ══ */
+    .view-tabs{display:flex;gap:6px;padding:16px 28px 0;flex-wrap:wrap;}
+    .view-tab{background:var(--surface);border:1px solid var(--border);border-bottom:none;color:var(--muted);font-family:var(--font-head);font-size:13px;font-weight:600;padding:10px 20px;border-radius:10px 10px 0 0;cursor:pointer;transition:all .2s;}
+    .view-tab:hover{color:var(--bloom);}
+    .view-tab.active{background:var(--bloom);color:#fff;border-color:var(--bloom);}
+    .staff-wrap{padding:16px 28px 32px;}
+    .staff-subtabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+    .staff-subtab{background:var(--surface);border:1.5px solid var(--border);color:var(--muted);font-family:var(--font-body);font-size:13px;font-weight:600;padding:8px 16px;border-radius:100px;cursor:pointer;transition:all .2s;}
+    .staff-subtab:hover{border-color:var(--bloom);color:var(--bloom);}
+    .staff-subtab.active{background:var(--bloom);color:#fff;border-color:var(--bloom);}
+    .staff-branchbar{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;max-width:460px;}
+    .staff-branchbar label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0;white-space:nowrap;}
+    .staff-panel{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px 24px;}
+    .staff-card-title{font-family:var(--font-head);font-size:16px;font-weight:700;margin-bottom:4px;}
+    .staff-card-sub{font-size:13px;color:var(--muted);margin-bottom:18px;}
+    .eval-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:18px;}
+    .eval-field label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px;display:block;}
+    .eval-readonly{padding:10px 12px;background:var(--bloom-light);border-radius:8px;font-size:14px;font-weight:600;color:var(--text);}
+    .core-q{background:var(--bloom-light);border-left:4px solid var(--bloom);border-radius:8px;padding:12px 16px;font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px;line-height:1.5;}
+    .consider-box{background:#f9fafb;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:18px;}
+    .consider-box h6{font-family:var(--font-head);font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;}
+    .consider-box ul{margin:0;padding-left:18px;columns:2;font-size:13px;color:var(--text);}
+    .consider-box li{margin-bottom:3px;break-inside:avoid;}
+    .scale-legend{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6;}
+    .eval-status{font-size:12px;font-weight:600;margin-bottom:14px;min-height:16px;}
+    .eval-status.editing{color:var(--warning,#d97706);}.eval-status.new{color:var(--success);}
+    .staff-table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;}
+    .staff-table thead th{background:var(--bloom);color:#fff;font-family:var(--font-head);font-size:11px;letter-spacing:.05em;text-transform:uppercase;padding:11px 12px;text-align:left;white-space:nowrap;}
+    .staff-table tbody td{padding:10px 12px;border-bottom:1px solid #f0f0f4;vertical-align:middle;}
+    .staff-table tbody tr:hover{background:var(--bloom-light);}
+    .score-pill{display:inline-block;min-width:30px;text-align:center;padding:3px 9px;border-radius:100px;font-weight:700;color:#fff;font-family:var(--font-head);}
+    .sp-low{background:#ef4444;}.sp-mid{background:#f59e0b;}.sp-high{background:#22c55e;}.sp-top{background:var(--bloom);}
+    .badge-pos{background:#dcfce7;color:#166534;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;}
+    .badge-neg{background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;}
+    .badge-off{background:#f1f5f9;color:#64748b;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;}
+    .badge-sent{background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;}
+    .staff-empty{text-align:center;color:var(--muted);padding:26px;font-size:13px;}
+    .radio-row{display:flex;gap:18px;flex-wrap:wrap;}
+    .radio-row label{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:var(--text);cursor:pointer;text-transform:none;letter-spacing:0;margin:0;}
+    .staff-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px;}
+    .staff-hint{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5;}
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginSection">
+  <div class="login-card">
+    <img src="bloom-logo.png" alt="Bloom Pharmacy"
+         style="width:80px;height:80px;object-fit:contain;display:block;margin:0 auto 20px;"
+         onerror="this.onerror=null; this.src='bloom-logo.jpg';">
+    <h2>Welcome back</h2>
+    <p>Sign in to the Bloom Resolution Dashboard</p>
+    <form id="loginForm" onsubmit="event.preventDefault(); doAuth();">
+      <label class="form-label-sm">Username</label>
+      <input type="text" id="u" class="input-field mb-3" placeholder="your.username" autocomplete="username">
+      <label class="form-label-sm">Password</label>
+      <input type="password" id="p" class="input-field" placeholder="••••••••" autocomplete="current-password">
+      <button type="submit" id="loginBtn" class="btn-login">Sign In</button>
+    </form>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashSection" class="hidden">
+  <nav class="top-nav">
+    <div class="brand">
+      <img src="bloom-logo.png" alt="Bloom Pharmacy"
+           style="width:40px;height:40px;object-fit:contain;"
+           onerror="this.onerror=null; this.src='bloom-logo.jpg';">
+      <div><div class="brand-name">Bloom Pharmacy</div><div class="brand-sub">Resolution Dashboard</div></div>
+    </div>
+    <div class="nav-actions">
+      <button class="btn btn-sm btn-outline-success" onclick="exportToExcel()">⬇ Export Excel</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="doLogout()">Sign out</button>
+    </div>
+  </nav>
+
+  <!-- ══ VIEW TABS (Staff Evaluation feature — additive) ══ -->
+  <div class="view-tabs" id="viewTabs">
+    <button class="view-tab active" id="tab-feedback" onclick="switchView('feedback')">📋 Feedback</button>
+    <button class="view-tab" id="tab-staff" onclick="switchView('staff')">⭐ Staff Evaluation</button>
+  </div>
+
+  <!-- ═══════════ FEEDBACK VIEW (existing — unchanged) ═══════════ -->
+  <div id="view-feedback">
+  <div class="stats-bar">
+    <div class="stat-card c-total"><div class="stat-label">Total</div><div class="stat-value" id="st-total">—</div></div>
+    <div class="stat-card c-new"><div class="stat-label">New</div><div class="stat-value" id="st-new">—</div></div>
+    <div class="stat-card c-review"><div class="stat-label">Under Review</div><div class="stat-value" id="st-review">—</div></div>
+    <div class="stat-card c-progress"><div class="stat-label">In Progress</div><div class="stat-value" id="st-progress">—</div></div>
+    <div class="stat-card c-resolved"><div class="stat-label">Resolved</div><div class="stat-value" id="st-resolved">—</div></div>
+    <div class="stat-card c-closed"><div class="stat-label">Closed</div><div class="stat-value" id="st-closed">—</div></div>
+  </div>
+
+  <div class="filter-wrap">
+    <div class="filter-panel">
+      <div class="filter-header" onclick="toggleFilters()">
+        <span class="filter-title">🔍 Filters</span>
+        <span class="filter-chevron open" id="filterChevron">▼</span>
+      </div>
+      <div class="filter-body" id="filterBody">
+        <div class="filter-group"><label>Ticket #</label><input type="text" id="fTicket" class="form-control form-control-sm" placeholder="e.g. WN01-3"></div>
+        <div class="filter-group" id="branchWrap">
+          <label>Branch</label>
+          <select id="fBranch" class="form-select form-select-sm">
+            <option value="">All Branches</option>
+            <option value="WN01">Wadi Al Nile</option><option value="P902">Point 90</option>
+            <option value="CA03">Capital</option><option value="AL04">Almaza</option>
+            <option value="MO05">Mall of Arabia</option><option value="UP06">Uptown</option>
+            <option value="S307">Street 31</option><option value="DP08">Diplo</option>
+            <option value="OS05">Online Store</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Status</label>
+          <select id="fStatus" class="form-select form-select-sm">
+            <option value="">All Status</option><option>New</option><option>Under Review</option>
+            <option>In Progress</option><option>Resolved</option><option>Closed</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Rating</label>
+          <select id="fRating" class="form-select form-select-sm">
+            <option value="">All Ratings</option><option value="1">1 ★</option><option value="2">2 ★★</option>
+            <option value="3">3 ★★★</option><option value="4">4 ★★★★</option><option value="5">5 ★★★★★</option>
+          </select>
+        </div>
+        <div class="filter-group"><label>Date From</label><input type="date" id="dateFrom" class="form-control form-control-sm"></div>
+        <div class="filter-group"><label>Date To</label><input type="date" id="dateTo" class="form-control form-control-sm"></div>
+        <div class="filter-group" style="display:flex;align-items:flex-end;"><button class="btn-reset" onclick="resetFilters()">Reset</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-card">
+      <div class="table-card-header">
+        <span class="table-card-title">Feedback Records</span>
+        <span id="rowCount" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="feedbackTable" class="table w-100 mb-0">
+          <thead><tr>
+            <th>Ticket #</th><th>Date</th><th>Store</th><th>Customer</th>
+            <th>Rating</th><th>Review</th><th>Photos</th><th>Notes</th><th>Status</th><th>Action</th>
+          </tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  </div><!-- /view-feedback -->
+
+  <!-- ═══════════ STAFF EVALUATION VIEW (new — additive) ═══════════ -->
+  <div id="view-staff" class="hidden">
+    <div class="staff-wrap">
+
+      <!-- Super-admin branch selector (hidden for managers) -->
+      <div class="staff-branchbar hidden" id="staffBranchBar">
+        <label>Branch</label>
+        <select id="staffBranch" class="form-select form-select-sm" onchange="onStaffBranchChange()">
+          <option value="">— Select a branch —</option>
+          <option value="all">All Branches (view history only)</option>
+          <option value="WN01">Wadi Al Nile</option><option value="P902">Point 90</option>
+          <option value="CA03">Capital</option><option value="AL04">Almaza</option>
+          <option value="MO05">Mall of Arabia</option><option value="UP06">Uptown</option>
+          <option value="S307">Street 31</option><option value="DP08">Diplo</option>
+          <option value="OS05">Online Store</option>
+        </select>
+      </div>
+
+      <!-- Sub-tabs -->
+      <div class="staff-subtabs">
+        <button class="staff-subtab active" id="sub-eval"      onclick="staffSub('eval')">📈 Monthly Evaluation</button>
+        <button class="staff-subtab"        id="sub-incident"  onclick="staffSub('incident')">⚡ Instant Incident</button>
+        <button class="staff-subtab"        id="sub-employees" onclick="staffSub('employees')">👥 Employees</button>
+        <button class="staff-subtab"        id="sub-history"   onclick="staffSub('history')">🗂️ History</button>
+      </div>
+
+      <!-- PANEL: Monthly Evaluation -->
+      <div class="staff-panel" id="panel-eval">
+        <div class="staff-card-title">Monthly Staff Evaluation</div>
+        <div class="staff-card-sub">Bloom Customer Experience Standards — one overall score per employee, per month.</div>
+        <div class="core-q" id="coreQ">On a scale of 1–10, how consistently did this employee deliver Bloom's customer experience standards this month?</div>
+        <div class="eval-grid">
+          <div class="eval-field"><label>Month &amp; Year</label><input type="month" id="evalMonth" class="form-control form-control-sm" onchange="loadEvalForMonth()"></div>
+          <div class="eval-field"><label>Store</label><div class="eval-readonly" id="evalStore">—</div></div>
+          <div class="eval-field"><label>Manager</label><div class="eval-readonly" id="evalManager">—</div></div>
+          <div class="eval-field"><label>Employee</label><select id="evalEmployee" class="form-select form-select-sm" onchange="loadEvalForMonth()"><option value="">— Select employee —</option></select></div>
+          <div class="eval-field">
+            <label>Score (1–10)</label>
+            <select id="evalScore" class="form-select form-select-sm">
+              <option value="">— Select score —</option>
+              <option value="1">1 — Far below standard</option>
+              <option value="2">2 — Far below standard</option>
+              <option value="3">3 — Below standard</option>
+              <option value="4">4 — Below standard</option>
+              <option value="5">5 — Meets minimum standard</option>
+              <option value="6">6 — Meets minimum standard</option>
+              <option value="7">7 — Strong &amp; consistent</option>
+              <option value="8">8 — Strong &amp; consistent</option>
+              <option value="9">9 — Outstanding</option>
+              <option value="10">10 — Role model / exceptional</option>
+            </select>
+            <div class="scale-legend">1–2 Far below · 3–4 Below · 5–6 Meets minimum · 7–8 Strong · 9 Outstanding · 10 Role model</div>
+          </div>
+        </div>
+        <div class="consider-box">
+          <h6>Consider these when scoring (guidance only — not scored separately)</h6>
+          <ul>
+            <li>Greeting &amp; politeness</li><li>Attentiveness</li>
+            <li>Accuracy of advice / product knowledge</li><li>Speed &amp; follow-through</li>
+            <li>Complaint handling</li><li>Teamwork during peak times</li>
+            <li>Adherence to Bloom SOPs / appearance</li>
+          </ul>
+        </div>
+        <div class="eval-field" style="margin-bottom:16px;"><label>Comments</label><textarea id="evalComments" class="form-control form-control-sm" rows="3" placeholder="Optional notes supporting the score…"></textarea></div>
+        <div class="eval-status" id="evalStatus"></div>
+        <div class="staff-actions"><button class="btn btn-bloom" onclick="saveEvaluation()" id="evalSaveBtn">Save Evaluation</button></div>
+        <div class="staff-hint">One evaluation is kept per employee per month. Saving again for the same month updates that record (with an audit-log entry) — previous months are preserved.</div>
+      </div>
+
+      <!-- PANEL: Instant Incident -->
+      <div class="staff-panel hidden" id="panel-incident">
+        <div class="staff-card-title">Instant Staff Incident</div>
+        <div class="staff-card-sub">Record a specific behavior, issue, violation, or positive performance noticed during the month. Date &amp; time are captured automatically.</div>
+        <div class="eval-grid">
+          <div class="eval-field"><label>Store</label><div class="eval-readonly" id="incStore">—</div></div>
+          <div class="eval-field"><label>Employee</label><select id="incEmployee" class="form-select form-select-sm"><option value="">— Select employee —</option></select></div>
+          <div class="eval-field"><label>Category</label>
+            <select id="incCategory" class="form-select form-select-sm" onchange="onIncCategoryChange()">
+              <option value="">— Select category —</option>
+              <option>Name tag missing</option>
+              <option>Uniform / dress code</option>
+              <option>Customer interaction</option>
+              <option>Procedure violation</option>
+              <option>Positive behavior</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="eval-field"><label>Type</label>
+            <div class="radio-row" style="padding-top:8px;">
+              <label><input type="radio" name="incType" value="negative" checked> Negative</label>
+              <label><input type="radio" name="incType" value="positive"> Positive</label>
+            </div>
+          </div>
+        </div>
+        <div class="eval-field" style="margin-bottom:16px;"><label>What happened</label><textarea id="incDescription" class="form-control form-control-sm" rows="3" placeholder="Describe the incident…"></textarea></div>
+        <div class="eval-field" style="margin-bottom:16px;"><label>Notes (optional)</label><textarea id="incNotes" class="form-control form-control-sm" rows="2" placeholder="Any additional notes…"></textarea></div>
+        <div class="eval-field" style="margin-bottom:16px;"><label>Handling</label>
+          <div class="radio-row" style="padding-top:6px;">
+            <label><input type="radio" name="incHandling" value="record_only" checked> Record only</label>
+            <label><input type="radio" name="incHandling" value="sent_to_management"> Record &amp; send to management</label>
+          </div>
+        </div>
+        <div class="staff-actions"><button class="btn btn-bloom" onclick="saveIncident()" id="incSaveBtn">Save Incident</button></div>
+        <div class="staff-hint">Incidents are stored in the employee's history. They do <strong>not</strong> automatically change the monthly score — the manager considers them when scoring. Email delivery for "send to management" activates once the reporting backend is enabled.</div>
+      </div>
+
+      <!-- PANEL: Employees -->
+      <div class="staff-panel hidden" id="panel-employees">
+        <div class="staff-card-title">Branch Employees</div>
+        <div class="staff-card-sub">Add the staff working in your branch so they can be evaluated. Deactivating keeps their history but removes them from new evaluations.</div>
+        <div class="eval-grid" style="grid-template-columns:2fr 1fr;align-items:end;">
+          <div class="eval-field"><label>New employee name</label><input type="text" id="newEmpName" class="form-control form-control-sm" placeholder="e.g. Ahmed Hassan"></div>
+          <div class="eval-field"><button class="btn btn-bloom w-100" onclick="addEmployee()" id="addEmpBtn">+ Add Employee</button></div>
+        </div>
+        <div style="overflow-x:auto;margin-top:8px;">
+          <table class="staff-table">
+            <thead><tr><th>Employee</th><th>Store</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="empTableBody"><tr><td colspan="4" class="staff-empty">Select a branch to load employees.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PANEL: History -->
+      <div class="staff-panel hidden" id="panel-history">
+        <div class="staff-card-title">Evaluation &amp; Incident History</div>
+        <div class="staff-card-sub">Historical monthly evaluations and recorded incidents.</div>
+
+        <!-- Monthly Report submission (manual, branch-specific) -->
+        <div style="background:var(--bloom-light);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:18px;">
+          <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:2px;">📤 Submit Monthly Report to Management</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Emails management an Excel report of this branch's evaluations &amp; incidents for the selected month.</div>
+          <div class="eval-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:0;">
+            <div class="eval-field"><label>Report month</label><input type="month" id="reportMonth" class="form-control form-control-sm"></div>
+            <div class="eval-field" style="display:flex;align-items:flex-end;"><button class="btn btn-bloom w-100" id="reportBtn" onclick="submitMonthlyReport()">Submit Monthly Report</button></div>
+          </div>
+          <div class="staff-hint" id="reportStatus" style="margin-top:10px;"></div>
+        </div>
+
+        <div class="eval-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));">
+          <div class="eval-field"><label>Employee</label><select id="histEmployee" class="form-select form-select-sm" onchange="renderHistory()"><option value="">All employees</option></select></div>
+          <div class="eval-field"><label>Month</label><input type="month" id="histMonth" class="form-control form-control-sm" onchange="renderHistory()"></div>
+          <div class="eval-field" style="display:flex;align-items:flex-end;"><button class="btn-reset" onclick="clearHistoryFilters()">Reset</button></div>
+        </div>
+        <h6 style="font-family:var(--font-head);font-size:13px;margin:10px 0 8px;">Monthly Evaluations</h6>
+        <div style="overflow-x:auto;">
+          <table class="staff-table">
+            <thead><tr><th>Employee</th><th>Store</th><th>Month</th><th>Score</th><th>Comments</th><th>Manager</th><th>Date</th></tr></thead>
+            <tbody id="histEvalBody"><tr><td colspan="7" class="staff-empty">Select a branch to load history.</td></tr></tbody>
+          </table>
+        </div>
+        <h6 style="font-family:var(--font-head);font-size:13px;margin:22px 0 8px;">Instant Incidents</h6>
+        <div style="overflow-x:auto;">
+          <table class="staff-table">
+            <thead><tr><th>Employee</th><th>Store</th><th>Category</th><th>Type</th><th>What happened</th><th>Handling</th><th>Manager</th><th>Date</th></tr></thead>
+            <tbody id="histIncBody"><tr><td colspan="8" class="staff-empty">Select a branch to load history.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /view-staff -->
+</div>
+
+<!-- AUDIT LOG MODAL -->
+<div id="logModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;width:min(600px,96vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.25);">
+    <div style="padding:18px 22px;border-bottom:1px solid #f0f0f4;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-family:var(--font-head);font-weight:700;font-size:15px;">Activity Log</div>
+        <div id="logModalTicket" style="font-size:12px;color:var(--muted);font-family:monospace;margin-top:2px;"></div>
+      </div>
+      <button onclick="closeLogModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;">&times;</button>
+    </div>
+    <div id="logModalBody" style="overflow-y:auto;padding:18px 22px;flex:1;"></div>
+  </div>
+</div>
+
+<!-- PHOTO LIGHTBOX -->
+<div id="lightbox" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;cursor:zoom-out;" onclick="closeLightbox()">
+  <img id="lightboxImg" src="" alt="" style="max-width:94vw;max-height:94vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+  <button onclick="closeLightbox()" style="position:absolute;top:20px;right:24px;background:rgba(255,255,255,0.1);color:#fff;border:none;width:44px;height:44px;border-radius:50%;font-size:24px;cursor:pointer;line-height:1;">&times;</button>
+</div>
+
+<!-- PHOTO GALLERY MODAL (per-ticket) -->
+<div id="galleryModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;width:min(720px,96vw);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.3);">
+    <div style="padding:16px 22px;border-bottom:1px solid #f0f0f4;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-family:var(--font-head);font-weight:700;font-size:15px;">📷 Customer Photos</div>
+        <div id="galleryTicket" style="font-size:12px;color:var(--muted);font-family:monospace;margin-top:2px;"></div>
+      </div>
+      <button onclick="closeGallery()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;">&times;</button>
+    </div>
+    <div id="galleryMain" style="background:#1a1a2e;padding:14px;display:flex;align-items:center;justify-content:center;min-height:300px;max-height:55vh;">
+      <img id="galleryMainImg" src="" alt="" style="max-width:100%;max-height:55vh;border-radius:6px;cursor:zoom-in;" onclick="openLightbox(this.src)">
+    </div>
+    <div id="galleryThumbs" style="padding:14px 22px;display:flex;gap:8px;overflow-x:auto;flex-wrap:nowrap;"></div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.5/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit,
+         updateDoc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const app = initializeApp({
+  apiKey:"AIzaSyCccdLw-wMiy4YahpU8lq6PxJJoDra1g5s",
+  authDomain:"bloom-customercare.firebaseapp.com",
+  projectId:"bloom-customercare",
+  storageBucket:"bloom-customercare.firebasestorage.app",
+  messagingSenderId:"925494560966",
+  appId:"1:925494560966:web:2c8bfadbc125f0f6ae2fc7"
+});
+const db   = getFirestore(app);
+const auth = getAuth(app);
+await signInAnonymously(auth);
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let table      = null;
+let _session   = null;
+let _allTickets = [];   // cache for current dataset (used by photo gallery)
+const STATS    = ['New','Under Review','In Progress','Resolved','Closed'];
+
+function esc(str) {
+  if (!str && str !== 0) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── Session storage helpers (localStorage with 30-day expiry) ─────────────────
+const SESSION_KEY    = 'bloomCCAdmin';
+const SESSION_MAX_MS = 30 * 24 * 60 * 60 * 1000;  // 30 days
+
+function loadSession() {
+  // Try localStorage first (new format with expiry), fall back to sessionStorage (old format)
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (raw) {
+      const obj = JSON.parse(raw);
+      if (obj && obj.user && obj.savedAt && (Date.now() - obj.savedAt) < SESSION_MAX_MS) {
+        return obj.user;
+      }
+      // Expired — clean up
+      localStorage.removeItem(SESSION_KEY);
+    }
+    // Legacy: someone still has a sessionStorage entry from before this update
+    const legacy = sessionStorage.getItem(SESSION_KEY);
+    if (legacy) {
+      sessionStorage.removeItem(SESSION_KEY);
+      return JSON.parse(legacy);
+    }
+  } catch(_) { /* corrupt data — ignore */ }
+  return null;
+}
+
+function saveSession(user) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ user, savedAt: Date.now() }));
+}
+
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(SESSION_KEY);  // belt and suspenders
+}
+
+// ── Session restore ────────────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  console.log('[Bloom CC] Build: 2026-05-12 with persistent 30-day session');
+  const saved = loadSession();
+  if (saved) {
+    console.log('[Bloom CC] Restored session for:', saved.username);
+    _session = saved;
+    if (_session) { showDash(); await loadData(); }
+  } else {
+    console.log('[Bloom CC] No active session — showing login');
+  }
+  document.getElementById('logModal').addEventListener('click', e => { if (e.target === document.getElementById('logModal')) closeLogModal(); });
+  document.getElementById('galleryModal').addEventListener('click', e => { if (e.target === document.getElementById('galleryModal')) closeGallery(); });
+});
+
+// ── Auth ───────────────────────────────────────────────────────────────────────
+window.doAuth = async function() {
+  const uRaw = document.getElementById('u').value.trim();
+  const p    = document.getElementById('p').value.trim();
+  document.getElementById('loginError').textContent = '';
+  if (!uRaw || !p) return;
+
+  const setBusy = (busy) => {
+    document.getElementById('loginBtn').disabled    = busy;
+    document.getElementById('loginBtn').textContent = busy ? 'Signing in…' : 'Sign In';
+  };
+  setBusy(true);
+
+  try {
+    // Try multiple case variants of the username because Firestore doc IDs are case-sensitive.
+    // The seed used various cases (e.g. "M.saad", "a.saeid") so we attempt all common variants.
+    const tried = new Set();
+    const variants = [uRaw, uRaw.toLowerCase(), uRaw.toUpperCase(),
+                      uRaw.charAt(0).toUpperCase() + uRaw.slice(1).toLowerCase(),
+                      uRaw.charAt(0).toLowerCase() + uRaw.slice(1)];
+
+    let foundSnap = null;
+    for (const v of variants) {
+      if (tried.has(v)) continue;
+      tried.add(v);
+      const snap = await getDoc(doc(db, 'users', v));
+      if (snap.exists()) { foundSnap = snap; break; }
+    }
+
+    // Fallback: scan the users collection for a case-insensitive match on the username field.
+    if (!foundSnap) {
+      const all = await getDocs(collection(db, 'users'));
+      const target = uRaw.toLowerCase();
+      for (const d of all.docs) {
+        const data = d.data();
+        if ((d.id || '').toLowerCase() === target ||
+            (data.username || '').toLowerCase() === target) {
+          foundSnap = d;
+          break;
+        }
+      }
+    }
+
+    if (!foundSnap) {
+      setBusy(false);
+      document.getElementById('loginError').textContent = 'Incorrect username or password.';
+      return;
+    }
+
+    // Verify password — support BOTH bcrypt hash (preferred) and plain text (legacy fallback).
+    // After full migration via hash-passwords.html, only the bcrypt branch is hit.
+    const userData = foundSnap.data();
+    let passwordOk = false;
+    if (userData.password_hash) {
+      // Modern: bcrypt verification (one-way, can't be reversed even from a DB dump)
+      const bcryptLib = (typeof bcrypt !== 'undefined') ? bcrypt
+                      : (typeof dcodeIO !== 'undefined' && dcodeIO.bcrypt) ? dcodeIO.bcrypt
+                      : null;
+      if (!bcryptLib) {
+        console.error('bcryptjs library failed to load — cannot verify hashed password');
+        setBusy(false);
+        document.getElementById('loginError').textContent = 'Login service unavailable. Please refresh the page.';
+        return;
+      }
+      try {
+        passwordOk = bcryptLib.compareSync(p, userData.password_hash);
+      } catch(e) {
+        console.error('bcrypt compare failed:', e);
+        passwordOk = false;
+      }
+    } else if (userData.password !== undefined && userData.password !== null) {
+      // Legacy: plain-text comparison. Will be removed after migration is complete.
+      passwordOk = (userData.password === p);
+    }
+
+    if (!passwordOk) {
+      setBusy(false);
+      document.getElementById('loginError').textContent = 'Incorrect username or password.';
+      return;
+    }
+
+    // Don't store password fields in session
+    const sessionData = { ...userData };
+    delete sessionData.password;
+    delete sessionData.password_hash;
+
+    _session = sessionData;
+    saveSession(_session);
+    setBusy(false);
+    showDash();
+    await loadData();
+  } catch(err) {
+    console.error('Login error:', err);
+    setBusy(false);
+    document.getElementById('loginError').textContent = 'Connection error. Please try again.';
+  }
+};
+
+function showDash() {
+  document.getElementById('loginSection').classList.add('hidden');
+  document.getElementById('dashSection').classList.remove('hidden');
+  if (_session.role === 'manager') document.getElementById('branchWrap').style.display = 'none';
+  _staffInited = false; _employees = [];   // Staff Evaluation: re-init per login (handles user switch without reload)
+  switchView('feedback');   // always start on the existing Feedback view
+}
+
+// ── Load data — no orderBy to avoid composite index requirement ────────────────
+window.loadData = async function() {
+  $('#tableBody').html('<tr><td colspan="9" class="text-center py-4 text-muted">Loading…</td></tr>');
+  try {
+    let snap;
+    if (_session.role === 'admin') {
+      snap = await getDocs(query(collection(db, 'tickets'), limit(500)));
+    } else {
+      snap = await getDocs(query(collection(db, 'tickets'), where('store_id','==',_session.store_id)));
+    }
+
+    if (snap.empty) {
+      $('#tableBody').html('<tr><td colspan="9" class="text-center py-4 text-muted">No records found.</td></tr>');
+      ['total','new','review','progress','resolved','closed'].forEach(k => $('#st-'+k).text('0'));
+      if (table) { table.destroy(); table = null; }
+      return;
+    }
+
+    const data = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    // Sort newest first client-side (avoids composite index)
+    data.sort((a,b) => {
+      const ta = a.created_at?.toDate ? a.created_at.toDate().getTime() : 0;
+      const tb = b.created_at?.toDate ? b.created_at.toDate().getTime() : 0;
+      return tb - ta;
+    });
+    _allTickets = data;   // accessible to openPhotoGallery
+    renderData(data);
+  } catch(err) {
+    $('#tableBody').html('<tr><td colspan="10" class="text-center py-4 text-danger">Failed to load: '+esc(err.message)+'</td></tr>');
+  }
+};
+
+function renderData(data) {
+  const counts = {'New':0,'Under Review':0,'In Progress':0,'Resolved':0,'Closed':0};
+  data.forEach(r => { if (counts[r.status]!==undefined) counts[r.status]++; });
+  $('#st-total').text(data.length);
+  $('#st-new').text(counts['New']);
+  $('#st-review').text(counts['Under Review']);
+  $('#st-progress').text(counts['In Progress']);
+  $('#st-resolved').text(counts['Resolved']);
+  $('#st-closed').text(counts['Closed']);
+
+  const html = data.map(r => {
+    const rating = parseInt(r.rating,10) || 0;
+    const stars  = '★'.repeat(rating)+'☆'.repeat(5-rating);
+    const tsDate = r.created_at?.toDate ? r.created_at.toDate() : null;
+    const tsMs   = tsDate ? tsDate.getTime() : 0;          // numeric for sorting + filtering
+    const ts     = tsDate ? tsDate.toLocaleString() : '';  // human-readable for display
+    const phone  = r.phone ? '<a href="tel:'+esc(r.phone)+'" style="color:inherit">'+esc(r.phone)+'</a>' : '—';
+    const email  = r.email ? '<br><a href="mailto:'+esc(r.email)+'" style="font-size:11px;color:var(--muted)">'+esc(r.email)+'</a>' : '';
+    const full   = esc(r.review||'');
+    const short  = full.length>120 ? full.substring(0,120)+'…' : full;
+    const rev    = full.length>120
+      ? '<span class="review-short" id="rs-'+r.id+'">'+short+'</span><span class="review-full" id="rf-'+r.id+'">'+full+'</span><br><span class="review-toggle" onclick="toggleReview(\''+r.id+'\')">Show more</span>'
+      : '<span>'+full+'</span>';
+    const opts   = STATS.map(o=>'<option value="'+o+'" '+(r.status===o?'selected':'')+'>'+o+'</option>').join('');
+    const sc     = r.status==='Resolved'?'st-Resolved':r.status==='Closed'?'st-Closed':'';
+
+    // Photos column — View button if any photos exist, dash otherwise.
+    // Clicking opens a gallery modal scoped to this ticket.
+    const photoCount = (Array.isArray(r.photos) ? r.photos.length : 0);
+    let photoCell = '<span style="color:var(--muted);font-size:13px">—</span>';
+    if (photoCount > 0) {
+      photoCell = '<button type="button" class="btn btn-sm btn-outline-bloom" '+
+                  'onclick="openPhotoGallery(\''+r.id+'\')" '+
+                  'title="View attached photos" '+
+                  'style="white-space:nowrap;font-size:12px;padding:4px 10px;">'+
+                    '📷 View ('+photoCount+')'+
+                  '</button>';
+    }
+
+    return '<tr class="'+sc+'" data-id="'+r.id+'" data-rating="'+rating+'" data-store="'+esc(r.store_id)+'" data-ts="'+ts+'" data-ts-ms="'+tsMs+'">' +
+      '<td><span class="badge bg-dark" style="font-family:monospace;font-size:11px">'+esc(r.ticket_id)+'</span></td>' +
+      '<td data-order="'+tsMs+'" style="white-space:nowrap;font-size:12px;color:var(--muted)">'+ts+'</td>' +
+      '<td><strong style="font-size:13px">'+esc(r.store_name)+'</strong><br><span style="font-size:11px;color:var(--muted)">'+esc(r.store_id)+'</span></td>' +
+      '<td><strong>'+esc(r.name)+'</strong><br><small>'+phone+email+'</small></td>' +
+      '<td style="white-space:nowrap"><span class="star-badge r'+rating+'">'+stars+' '+rating+'</span></td>' +
+      '<td><div class="review-cell" style="font-size:12px;">'+rev+'</div></td>' +
+      '<td style="text-align:center">'+photoCell+'</td>' +
+      '<td><textarea id="note-'+r.id+'" class="form-control notes-field" rows="2">'+esc(r.notes||'')+'</textarea></td>' +
+      '<td><select id="stat-'+r.id+'" class="form-select status-select">'+opts+'</select></td>' +
+      '<td style="white-space:nowrap"><button onclick="saveRow(\''+r.id+'\',\''+esc(r.ticket_id)+'\',this)" class="btn btn-sm btn-bloom">Save</button> <button onclick="showLogs(\''+esc(r.ticket_id)+'\')" class="btn btn-sm btn-outline-secondary" title="Activity log">📋</button></td>' +
+    '</tr>';
+  }).join('');
+
+  $('#tableBody').html(html);
+  initTable();
+}
+
+function initTable() {
+  if ($.fn.DataTable.isDataTable('#feedbackTable')) $('#feedbackTable').DataTable().destroy();
+  table = $('#feedbackTable').DataTable({
+    pageLength:25, dom:'rtip', order:[[1,'desc']],
+    language:{info:'Showing _START_–_END_ of _TOTAL_ records',paginate:{previous:'‹',next:'›'}},
+    drawCallback: function() {
+      const i = this.api().page.info();
+      $('#rowCount').text(i.recordsDisplay+' of '+i.recordsTotal+' records');
+    }
+  });
+
+  // Date filter — uses the machine-readable data-ts-ms (unix ms) on each row
+  if (!$.fn.dataTable.ext.search.some(f=>f._ccDate)) {
+    const f = function(settings, searchData, dataIndex) {
+      // Only apply this filter to OUR table (in case other DataTables exist on the page)
+      if (settings.nTable.id !== 'feedbackTable') return true;
+      const from = $('#dateFrom').val();
+      const to   = $('#dateTo').val();
+      if (!from && !to) return true;
+
+      const node = settings.aoData[dataIndex].nTr;
+      if (!node) return true;
+      const tsMs = parseInt(node.getAttribute('data-ts-ms'), 10);
+      if (!tsMs) return true;
+
+      // 'from' is a YYYY-MM-DD string. new Date('YYYY-MM-DD') parses as UTC midnight.
+      // To compare against a local-timezone tsMs, build local-midnight start/end-of-day.
+      if (from) {
+        const f0 = new Date(from + 'T00:00:00').getTime();
+        if (tsMs < f0) return false;
+      }
+      if (to) {
+        const t1 = new Date(to + 'T23:59:59.999').getTime();
+        if (tsMs > t1) return false;
+      }
+      return true;
+    };
+    f._ccDate = true;
+    $.fn.dataTable.ext.search.push(f);
+  }
+  // Rating filter
+  if (!$.fn.dataTable.ext.search.some(f=>f._ccRating)) {
+    const f = function(s,data,idx) {
+      const sel=$('#fRating').val(); if(!sel) return true;
+      const tr=table?table.row(idx).node():null; if(!tr) return true;
+      return $(tr).attr('data-rating')===sel;
+    };
+    f._ccRating=true; $.fn.dataTable.ext.search.push(f);
+  }
+  // Status filter
+  if (!$.fn.dataTable.ext.search.some(f=>f._ccStatus)) {
+    const f = function(s,data,idx) {
+      const sel=$('#fStatus').val(); if(!sel) return true;
+      const tr=table?table.row(idx).node():null; if(!tr) return true;
+      return $(tr).find('select[id^="stat-"]').val()===sel;
+    };
+    f._ccStatus=true; $.fn.dataTable.ext.search.push(f);
+  }
+  // Branch filter
+  if (!$.fn.dataTable.ext.search.some(f=>f._ccBranch)) {
+    const f = function(s,data,idx) {
+      const sel=$('#fBranch').val(); if(!sel) return true;
+      const tr=table?table.row(idx).node():null; if(!tr) return true;
+      return $(tr).attr('data-store')===sel;
+    };
+    f._ccBranch=true; $.fn.dataTable.ext.search.push(f);
+  }
+
+  $('#fTicket').off('keyup').on('keyup', function(){ table.column(0).search(this.value).draw(); });
+  $('#fBranch,#fStatus,#fRating').off('change').on('change', function(){ table.draw(); });
+  $('#dateFrom,#dateTo').off('change').on('change', function(){ table.draw(); });
+}
+
+// ── Save row ───────────────────────────────────────────────────────────────────
+window.saveRow = async function(docId, ticketId, btn) {
+  const status = $('#stat-'+docId).val();
+  const notes  = $('#note-'+docId).val();
+  $(btn).prop('disabled',true).text('…');
+  try {
+    const ref = doc(db,'tickets',docId);
+    const old = await getDoc(ref);
+    const oldData = old.exists() ? old.data() : {};
+
+    await updateDoc(ref, { status, notes, last_updated: serverTimestamp() });
+
+    const logBase = ticketId+'_'+Date.now();
+    if (oldData.status !== status) {
+      await setDoc(doc(db,'logs',logBase+'_s'), {
+        ticket_id:ticketId, user:_session.username,
+        action:'Status Changed', detail:oldData.status+' → '+status,
+        created_at:serverTimestamp()
+      });
+    }
+    if (notes && notes !== (oldData.notes||'')) {
+      await setDoc(doc(db,'logs',logBase+'_n'), {
+        ticket_id:ticketId, user:_session.username,
+        action: oldData.notes ? 'Note Updated' : 'Note Added', detail:notes,
+        created_at:serverTimestamp()
+      });
+    }
+
+    $(btn).prop('disabled',false).text('Save');
+    Swal.fire({text:'Updated successfully',icon:'success',timer:1200,showConfirmButton:false});
+    const tr=$(btn).closest('tr');
+    tr.removeClass('st-Resolved st-Closed');
+    if(status==='Resolved') tr.addClass('st-Resolved');
+    if(status==='Closed')   tr.addClass('st-Closed');
+  } catch(err) {
+    $(btn).prop('disabled',false).text('Save');
+    Swal.fire({text:'Save failed: '+err.message,icon:'error'});
+  }
+};
+
+// ── Show logs — simple query without orderBy (no index needed) ─────────────────
+window.showLogs = async function(ticketId) {
+  document.getElementById('logModalTicket').textContent = ticketId;
+  document.getElementById('logModal').style.display = 'flex';
+  const body = document.getElementById('logModalBody');
+  body.innerHTML = '<div class="text-center text-muted py-4">Loading…</div>';
+  try {
+    const snap = await getDocs(query(collection(db,'logs'), where('ticket_id','==',ticketId)));
+    const logs = snap.docs.map(d=>d.data()).sort((a,b)=>{
+      const ta=a.created_at?.toDate?a.created_at.toDate().getTime():0;
+      const tb=b.created_at?.toDate?b.created_at.toDate().getTime():0;
+      return ta-tb;
+    });
+    if (!logs.length) {
+      body.innerHTML = '<div class="text-center text-muted py-4" style="font-size:13px;">No activity recorded yet for this ticket.</div>';
+      return;
+    }
+    body.innerHTML = '<div style="display:flex;flex-direction:column;">' + logs.map(log => {
+      const ts = log.created_at?.toDate ? log.created_at.toDate().toLocaleString() : '';
+      return '<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f0f0f4;">' +
+        '<div style="flex-shrink:0;width:8px;height:8px;background:var(--bloom);border-radius:50%;margin-top:5px;"></div>' +
+        '<div style="flex:1;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
+            '<span style="font-weight:600;font-size:13px;">'+esc(log.action)+'</span>' +
+            '<span style="font-size:11px;color:var(--muted);white-space:nowrap;">'+ts+'</span>' +
+          '</div>' +
+          '<div style="font-size:12px;color:var(--muted);margin-top:2px;">by <strong>'+esc(log.user)+'</strong></div>' +
+          (log.detail?'<div style="font-size:12px;margin-top:4px;background:#f8f9fa;padding:6px 10px;border-radius:6px;">'+esc(log.detail)+'</div>':'') +
+        '</div></div>';
+    }).join('') + '</div>';
+  } catch(err) {
+    body.innerHTML = '<div class="text-center text-danger py-4" style="font-size:13px;">Failed to load logs: '+esc(err.message)+'</div>';
+  }
+};
+
+window.closeLogModal = function() { document.getElementById('logModal').style.display='none'; };
+
+window.openLightbox = function(url) {
+  const lb = document.getElementById('lightbox');
+  document.getElementById('lightboxImg').src = url;
+  lb.style.display = 'flex';
+};
+window.closeLightbox = function() {
+  document.getElementById('lightbox').style.display = 'none';
+  document.getElementById('lightboxImg').src = '';
+};
+
+// Photo gallery — opens a modal scoped to one ticket showing all its photos
+// with a clickable thumbnail strip + main view that further opens to lightbox.
+window.openPhotoGallery = function(ticketId) {
+  // Find the ticket data from the current dataset
+  const ticket = _allTickets.find(t => t.id === ticketId);
+  if (!ticket || !Array.isArray(ticket.photos) || !ticket.photos.length) {
+    return;
+  }
+  document.getElementById('galleryTicket').textContent = ticket.ticket_id + ' • ' + ticket.photos.length + ' photo(s)';
+  // Render main image (first photo by default)
+  document.getElementById('galleryMainImg').src = ticket.photos[0].url;
+  // Render thumbnail strip
+  document.getElementById('galleryThumbs').innerHTML = ticket.photos.map((p, i) =>
+    '<img src="'+esc(p.thumb_url || p.url)+'" '+
+    'data-full="'+esc(p.url)+'" '+
+    'alt="thumb '+(i+1)+'" '+
+    'style="width:72px;height:72px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid '+(i===0?'var(--bloom)':'transparent')+';flex-shrink:0;" '+
+    'onclick="selectGalleryPhoto(this, \''+esc(p.url)+'\')">'
+  ).join('');
+  document.getElementById('galleryModal').style.display = 'flex';
+};
+window.selectGalleryPhoto = function(thumbEl, url) {
+  document.getElementById('galleryMainImg').src = url;
+  // Update border highlighting on the active thumbnail
+  document.querySelectorAll('#galleryThumbs img').forEach(img => img.style.border = '2px solid transparent');
+  thumbEl.style.border = '2px solid var(--bloom)';
+};
+window.closeGallery = function() {
+  document.getElementById('galleryModal').style.display = 'none';
+  document.getElementById('galleryMainImg').src = '';
+  document.getElementById('galleryThumbs').innerHTML = '';
+};
+
+window.toggleReview = function(id) {
+  const rs=document.getElementById('rs-'+id),rf=document.getElementById('rf-'+id);
+  const btn=rs.parentElement.querySelector('.review-toggle');
+  const exp=rf.style.display==='inline';
+  rs.style.display=exp?'inline':'none'; rf.style.display=exp?'none':'inline';
+  btn.textContent=exp?'Show more':'Show less';
+};
+
+window.resetFilters = function() {
+  $('#fTicket').val(''); $('#fBranch,#fStatus,#fRating').val(''); $('#dateFrom,#dateTo').val('');
+  if(table) table.search('').columns().search('').draw();
+};
+
+window.toggleFilters = function() {
+  const b=document.getElementById('filterBody'),c=document.getElementById('filterChevron');
+  const open=!b.classList.contains('collapsed');
+  b.classList.toggle('collapsed',open); c.classList.toggle('open',!open);
+};
+
+window.exportToExcel = function() {
+  if(!table) return;
+  const rows=table.rows({filter:'applied'}).nodes().toArray();
+  const data=rows.map(tr=>{
+    const id=$(tr).data('id');
+    const cells=$(tr).find('td');
+    const ticket = _allTickets.find(t => t.id === id);
+    const photoCount = (ticket && Array.isArray(ticket.photos)) ? ticket.photos.length : 0;
+    const photoUrls  = (ticket && Array.isArray(ticket.photos))
+      ? ticket.photos.map(p => p.url).join(' | ')
+      : '';
+    return {
+      'Ticket':   cells.eq(0).find('.badge').text().trim(),
+      'Date':     cells.eq(1).text().trim(),
+      'Store':    cells.eq(2).find('strong').text().trim(),
+      'Store ID': cells.eq(2).find('span').text().trim(),
+      'Name':     cells.eq(3).find('strong').text().trim(),
+      'Phone':    cells.eq(3).find('a[href^="tel"]').text().trim(),
+      'Email':    cells.eq(3).find('a[href^="mailto"]').text().trim(),
+      'Rating':   cells.eq(4).text().replace(/[★☆\s]/g,'').trim(),
+      'Review':   cells.eq(5).text().trim(),
+      'Photos':   photoCount,
+      'Photo URLs': photoUrls,
+      'Notes':    $('#note-'+id).val()||'',
+      'Status':   $('#stat-'+id).val()||''
+    };
+  });
+  if(!data.length) return Swal.fire({text:'No data to export.',icon:'info'});
+  const ws=XLSX.utils.json_to_sheet(data);
+  ws['!cols']=Object.keys(data[0]).map(k=>({wch:Math.max(k.length,...data.map(r=>String(r[k]||'').length))+2}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Bloom Feedback');
+  XLSX.writeFile(wb,'Bloom_CC_'+new Date().toISOString().slice(0,10)+'.xlsx');
+};
+
+window.doLogout = function() {
+  clearSession();
+  _session=null;
+  if(table){table.destroy();table=null;}
+  $('#tableBody').html('');
+  document.getElementById('dashSection').classList.add('hidden');
+  document.getElementById('loginSection').classList.remove('hidden');
+  document.getElementById('u').value=''; document.getElementById('p').value='';
+  document.getElementById('loginError').textContent='';
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STAFF EVALUATION FEATURE (additive — new collections: employees / evaluations
+   / incidents / eval_logs). Reuses existing db, _session, esc, serverTimestamp.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const STORE_MAP = {WN01:'Wadi Al Nile',P902:'Point 90',CA03:'Capital',AL04:'Almaza',MO05:'Mall of Arabia',UP06:'Uptown',S307:'Street 31',DP08:'Diplo',OS05:'Online Store'};
+let _staffInited   = false;
+let _employees     = [];   // cache of employee docs for the active store scope
+let _evalCache     = [];   // history cache
+let _incCache      = [];
+
+function isAdmin(){ return !!_session && _session.role === 'admin'; }
+
+// Resolve the store the staff panels operate on. Managers = their own store.
+// Super admins = the branch picker ('' = none chosen, 'all' = history-wide).
+function activeStore(){
+  if (!_session) return { id:null, name:'' };
+  if (_session.role === 'manager') return { id:_session.store_id, name: STORE_MAP[_session.store_id] || _session.store_id };
+  const v = (document.getElementById('staffBranch')||{}).value || '';
+  if (!v)          return { id:null,  name:'' };
+  if (v === 'all') return { id:'all', name:'All Branches' };
+  return { id:v, name: STORE_MAP[v] || v };
+}
+function needSpecificStore(store){
+  if (!store.id || store.id === 'all'){
+    Swal.fire({text:'Please select a specific branch first.', icon:'info'});
+    return true;
+  }
+  return false;
+}
+
+// ── View switching (top-level tabs) ────────────────────────────────────────
+window.switchView = function(view){
+  const staff = (view === 'staff');
+  document.getElementById('view-feedback').classList.toggle('hidden', staff);
+  document.getElementById('view-staff').classList.toggle('hidden', !staff);
+  document.getElementById('tab-feedback').classList.toggle('active', !staff);
+  document.getElementById('tab-staff').classList.toggle('active', staff);
+  if (staff) initStaffView();
+};
+
+function initStaffView(){
+  if (!_staffInited){
+    _staffInited = true;
+    // Manager identity + fixed store display
+    const mgr = _session.username || '';
+    document.getElementById('evalManager').textContent = mgr;
+    // Default month = current YYYY-MM
+    const now = new Date();
+    const ym = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+    document.getElementById('evalMonth').value = ym;
+    // Monthly report defaults to the CURRENT month (managers submit the current month's report).
+    document.getElementById('reportMonth').value = ym;
+    if (isAdmin()){
+      document.getElementById('staffBranchBar').classList.remove('hidden');
+    } else {
+      document.getElementById('staffBranchBar').classList.add('hidden');
+    }
+    refreshStoreLabels();
+  }
+  // Managers already have a fixed store → load immediately. Admins wait for a pick.
+  const store = activeStore();
+  if (store.id && store.id !== 'all') loadEmployees();
+}
+
+function refreshStoreLabels(){
+  const store = activeStore();
+  const label = store.id ? store.name : '—';
+  ['evalStore','incStore'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = label; });
+}
+
+window.onStaffBranchChange = function(){
+  refreshStoreLabels();
+  _employees = [];
+  const store = activeStore();
+  if (store.id){
+    // Specific branch OR 'all' — loadEmployees handles both; then refresh history.
+    loadEmployees().then(() => renderHistory());
+  } else {
+    fillEmployeeSelects();
+    renderEmployeeList();
+    renderHistory();
+  }
+};
+
+// ── Sub-tab switching ──────────────────────────────────────────────────────
+window.staffSub = function(name){
+  ['eval','incident','employees','history'].forEach(k => {
+    document.getElementById('panel-'+k).classList.toggle('hidden', k !== name);
+    document.getElementById('sub-'+k).classList.toggle('active', k === name);
+  });
+  if (name === 'history') renderHistory();
+  if (name === 'employees') renderEmployeeList();
+};
+
+// ── Employees ──────────────────────────────────────────────────────────────
+async function loadEmployees(){
+  const store = activeStore();
+  if (!store.id) { _employees = []; fillEmployeeSelects(); renderEmployeeList(); return; }
+  try {
+    let snap;
+    if (store.id === 'all') snap = await getDocs(collection(db,'employees'));
+    else snap = await getDocs(query(collection(db,'employees'), where('store_id','==',store.id)));
+    _employees = snap.docs.map(d => ({ id:d.id, ...d.data() }))
+                          .sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  } catch(e){ console.error('loadEmployees', e); _employees = []; }
+  fillEmployeeSelects();
+  renderEmployeeList();
+}
+
+function fillEmployeeSelects(){
+  const active = _employees.filter(e => e.active !== false);
+  const opt = e => '<option value="'+esc(e.id)+'">'+esc(e.name)+(isAdmin()&&activeStore().id==='all'?' ('+esc(e.store_id)+')':'')+'</option>';
+  const activeOpts = '<option value="">— Select employee —</option>' + active.map(opt).join('');
+  const evalSel = document.getElementById('evalEmployee'); if (evalSel) evalSel.innerHTML = activeOpts;
+  const incSel  = document.getElementById('incEmployee');  if (incSel)  incSel.innerHTML  = activeOpts;
+  const histSel = document.getElementById('histEmployee');
+  if (histSel) histSel.innerHTML = '<option value="">All employees</option>' + _employees.map(opt).join('');
+}
+
+function renderEmployeeList(){
+  const tb = document.getElementById('empTableBody');
+  if (!tb) return;
+  const store = activeStore();
+  if (!store.id){ tb.innerHTML = '<tr><td colspan="4" class="staff-empty">Select a branch to load employees.</td></tr>'; return; }
+  if (!_employees.length){ tb.innerHTML = '<tr><td colspan="4" class="staff-empty">No employees yet. Add one above.</td></tr>'; return; }
+  tb.innerHTML = _employees.map(e => {
+    const on = e.active !== false;
+    const badge = on ? '<span class="badge-pos">Active</span>' : '<span class="badge-off">Inactive</span>';
+    const btn = on
+      ? '<button class="btn btn-sm btn-outline-secondary" onclick="toggleEmployee(\''+esc(e.id)+'\',false)">Deactivate</button>'
+      : '<button class="btn btn-sm btn-outline-bloom" onclick="toggleEmployee(\''+esc(e.id)+'\',true)">Reactivate</button>';
+    return '<tr><td><strong>'+esc(e.name)+'</strong></td><td>'+esc(STORE_MAP[e.store_id]||e.store_id)+'</td><td>'+badge+'</td><td>'+btn+'</td></tr>';
+  }).join('');
+}
+
+window.addEmployee = async function(){
+  const store = activeStore();
+  if (needSpecificStore(store)) return;
+  const name = (document.getElementById('newEmpName').value || '').trim();
+  if (!name){ Swal.fire({text:'Enter an employee name.', icon:'info'}); return; }
+  const btn = document.getElementById('addEmpBtn');
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const id = 'EMP_' + store.id + '_' + Date.now();
+    await setDoc(doc(db,'employees',id), {
+      name, store_id: store.id, store_name: store.name,
+      active: true, created_at: serverTimestamp(), created_by: _session.username
+    });
+    document.getElementById('newEmpName').value = '';
+    await loadEmployees();
+    Swal.fire({text:'Employee added', icon:'success', timer:1100, showConfirmButton:false});
+  } catch(e){ Swal.fire({text:'Failed to add employee: '+e.message, icon:'error'}); }
+  btn.disabled = false; btn.textContent = '+ Add Employee';
+};
+
+window.toggleEmployee = async function(id, makeActive){
+  try {
+    await updateDoc(doc(db,'employees',id), { active: makeActive });
+    await loadEmployees();
+  } catch(e){ Swal.fire({text:'Update failed: '+e.message, icon:'error'}); }
+};
+
+// ── Monthly Evaluation ─────────────────────────────────────────────────────
+function evalDocId(store_id, employee_id, period){ return store_id + '_' + employee_id + '_' + period; }
+
+window.loadEvalForMonth = async function(){
+  const store = activeStore();
+  const empId = document.getElementById('evalEmployee').value;
+  const period = document.getElementById('evalMonth').value;
+  const statusEl = document.getElementById('evalStatus');
+  statusEl.className = 'eval-status';
+  statusEl.textContent = '';
+  if (!store.id || store.id === 'all' || !empId || !period) return;
+  try {
+    const snap = await getDoc(doc(db,'evaluations', evalDocId(store.id, empId, period)));
+    if (snap.exists()){
+      const d = snap.data();
+      document.getElementById('evalScore').value = String(d.score||'');
+      document.getElementById('evalComments').value = d.comments||'';
+      statusEl.className = 'eval-status editing';
+      statusEl.textContent = '✎ An evaluation already exists for this employee and month — saving will update it.';
+    } else {
+      document.getElementById('evalScore').value = '';
+      document.getElementById('evalComments').value = '';
+      statusEl.className = 'eval-status new';
+      statusEl.textContent = '+ New evaluation for this month.';
+    }
+  } catch(e){ console.error('loadEvalForMonth', e); }
+};
+
+window.saveEvaluation = async function(){
+  const store = activeStore();
+  if (needSpecificStore(store)) return;
+  const empId  = document.getElementById('evalEmployee').value;
+  const period = document.getElementById('evalMonth').value;
+  const score  = parseInt(document.getElementById('evalScore').value, 10);
+  const comments = (document.getElementById('evalComments').value || '').trim();
+  const emp = _employees.find(e => e.id === empId);
+  if (!empId || !emp){ Swal.fire({text:'Select an employee.', icon:'info'}); return; }
+  if (!period){ Swal.fire({text:'Select the month & year.', icon:'info'}); return; }
+  if (isNaN(score) || score < 1 || score > 10){ Swal.fire({text:'Select a score from 1 to 10.', icon:'info'}); return; }
+
+  const btn = document.getElementById('evalSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const id  = evalDocId(store.id, empId, period);
+    const ref = doc(db,'evaluations', id);
+    const existing = await getDoc(ref);
+    const isUpdate = existing.exists();
+
+    if (isUpdate){
+      const proceed = await Swal.fire({
+        title:'Update existing evaluation?',
+        text:'An evaluation for this employee and month already exists. This will replace its score and comments.',
+        icon:'warning', showCancelButton:true, confirmButtonText:'Update', confirmButtonColor:'#b22025'
+      });
+      if (!proceed.isConfirmed){ btn.disabled=false; btn.textContent='Save Evaluation'; return; }
+      await updateDoc(ref, { score, comments, manager_username:_session.username, manager_name:_session.username, updated_at: serverTimestamp() });
+    } else {
+      await setDoc(ref, {
+        employee_id: empId, employee_name: emp.name,
+        store_id: store.id, store_name: store.name,
+        period, score, comments,
+        manager_username: _session.username, manager_name: _session.username,
+        created_at: serverTimestamp(), updated_at: serverTimestamp()
+      });
+    }
+
+    // Audit log (mirrors existing /logs pattern, kept in a separate collection)
+    await setDoc(doc(db,'eval_logs', id + '_' + Date.now()), {
+      ref_type:'evaluation', eval_id:id, employee_id:empId, employee_name:emp.name,
+      store_id:store.id, period, action: isUpdate ? 'Evaluation Updated' : 'Evaluation Created',
+      detail:'Score '+score+'/10', user:_session.username, created_at: serverTimestamp()
+    });
+
+    btn.disabled=false; btn.textContent='Save Evaluation';
+    Swal.fire({text: isUpdate ? 'Evaluation updated' : 'Evaluation saved', icon:'success', timer:1300, showConfirmButton:false});
+    loadEvalForMonth();
+  } catch(e){
+    btn.disabled=false; btn.textContent='Save Evaluation';
+    Swal.fire({text:'Save failed: '+e.message, icon:'error'});
+  }
+};
+
+// ── Instant Incident ───────────────────────────────────────────────────────
+window.onIncCategoryChange = function(){
+  const cat = document.getElementById('incCategory').value;
+  const pos = document.querySelector('input[name="incType"][value="positive"]');
+  const neg = document.querySelector('input[name="incType"][value="negative"]');
+  if (cat === 'Positive behavior') pos.checked = true; else if (cat) neg.checked = true;
+};
+
+window.saveIncident = async function(){
+  const store = activeStore();
+  if (needSpecificStore(store)) return;
+  const empId = document.getElementById('incEmployee').value;
+  const emp = _employees.find(e => e.id === empId);
+  const category = document.getElementById('incCategory').value;
+  const type = (document.querySelector('input[name="incType"]:checked')||{}).value || 'negative';
+  const handling = (document.querySelector('input[name="incHandling"]:checked')||{}).value || 'record_only';
+  const description = (document.getElementById('incDescription').value || '').trim();
+  const notes = (document.getElementById('incNotes').value || '').trim();
+  if (!empId || !emp){ Swal.fire({text:'Select an employee.', icon:'info'}); return; }
+  if (!category){ Swal.fire({text:'Select a category.', icon:'info'}); return; }
+  if (!description){ Swal.fire({text:'Describe what happened.', icon:'info'}); return; }
+
+  const btn = document.getElementById('incSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const id = store.id + '_' + empId + '_' + Date.now();
+    await setDoc(doc(db,'incidents', id), {
+      employee_id: empId, employee_name: emp.name,
+      store_id: store.id, store_name: store.name,
+      category, type, description, notes,
+      handling, notify_status: handling === 'sent_to_management' ? 'pending' : 'n/a',
+      manager_username: _session.username, manager_name: _session.username,
+      created_at: serverTimestamp()
+    });
+    // reset form
+    document.getElementById('incCategory').value = '';
+    document.getElementById('incDescription').value = '';
+    document.getElementById('incNotes').value = '';
+    document.querySelector('input[name="incType"][value="negative"]').checked = true;
+    document.querySelector('input[name="incHandling"][value="record_only"]').checked = true;
+    btn.disabled=false; btn.textContent='Save Incident';
+    const msg = handling === 'sent_to_management'
+      ? 'Incident recorded. Management email will be delivered once the reporting backend is enabled.'
+      : 'Incident recorded in the employee’s history.';
+    Swal.fire({text: msg, icon:'success'});
+  } catch(e){
+    btn.disabled=false; btn.textContent='Save Incident';
+    Swal.fire({text:'Save failed: '+e.message, icon:'error'});
+  }
+};
+
+// ── History ────────────────────────────────────────────────────────────────
+function fmtTs(ts){ try { const d = ts && ts.toDate ? ts.toDate() : (ts ? new Date(ts) : null); return d ? d.toLocaleString() : '—'; } catch(_){ return '—'; } }
+function fmtPeriod(p){ if(!p) return '—'; const [y,m]=p.split('-'); const mn=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return (mn[parseInt(m,10)]||m)+' '+y; }
+function scorePill(n){ n=parseInt(n,10)||0; const c = n>=9?'sp-top':n>=7?'sp-high':n>=5?'sp-mid':'sp-low'; return '<span class="score-pill '+c+'">'+n+'</span>'; }
+
+window.renderHistory = async function(){
+  const store = activeStore();
+  const evalBody = document.getElementById('histEvalBody');
+  const incBody  = document.getElementById('histIncBody');
+  if (!store.id){ evalBody.innerHTML='<tr><td colspan="7" class="staff-empty">Select a branch to load history.</td></tr>'; incBody.innerHTML='<tr><td colspan="8" class="staff-empty">Select a branch to load history.</td></tr>'; return; }
+  evalBody.innerHTML = '<tr><td colspan="7" class="staff-empty">Loading…</td></tr>';
+  incBody.innerHTML  = '<tr><td colspan="8" class="staff-empty">Loading…</td></tr>';
+  try {
+    // Single where + client-side sort (no composite index — Spark-plan safe)
+    const evalSnap = store.id === 'all'
+      ? await getDocs(collection(db,'evaluations'))
+      : await getDocs(query(collection(db,'evaluations'), where('store_id','==',store.id)));
+    const incSnap = store.id === 'all'
+      ? await getDocs(collection(db,'incidents'))
+      : await getDocs(query(collection(db,'incidents'), where('store_id','==',store.id)));
+    _evalCache = evalSnap.docs.map(d => d.data());
+    _incCache  = incSnap.docs.map(d => d.data());
+  } catch(e){
+    evalBody.innerHTML = '<tr><td colspan="7" class="staff-empty">Failed to load: '+esc(e.message)+'</td></tr>';
+    incBody.innerHTML  = '<tr><td colspan="8" class="staff-empty">Failed to load.</td></tr>';
+    return;
+  }
+
+  const fEmp   = document.getElementById('histEmployee').value;
+  const fMonth = document.getElementById('histMonth').value;
+
+  let evals = _evalCache.filter(d => (!fEmp || d.employee_id===fEmp) && (!fMonth || d.period===fMonth));
+  evals.sort((a,b) => (b.period||'').localeCompare(a.period||'') || (a.employee_name||'').localeCompare(b.employee_name||''));
+  evalBody.innerHTML = evals.length ? evals.map(d =>
+    '<tr><td><strong>'+esc(d.employee_name)+'</strong></td><td>'+esc(STORE_MAP[d.store_id]||d.store_id)+'</td><td>'+esc(fmtPeriod(d.period))+'</td><td>'+scorePill(d.score)+'</td><td>'+esc(d.comments||'—')+'</td><td>'+esc(d.manager_name||d.manager_username||'—')+'</td><td style="white-space:nowrap;color:var(--muted);font-size:12px;">'+esc(fmtTs(d.updated_at||d.created_at))+'</td></tr>'
+  ).join('') : '<tr><td colspan="7" class="staff-empty">No evaluations found.</td></tr>';
+
+  let incs = _incCache.filter(d => (!fEmp || d.employee_id===fEmp) && (!fMonth || (d.created_at && d.created_at.toDate && (d.created_at.toDate().getFullYear()+'-'+String(d.created_at.toDate().getMonth()+1).padStart(2,'0'))===fMonth)));
+  incs.sort((a,b) => { const ta=a.created_at&&a.created_at.toDate?a.created_at.toDate().getTime():0; const tb=b.created_at&&b.created_at.toDate?b.created_at.toDate().getTime():0; return tb-ta; });
+  incBody.innerHTML = incs.length ? incs.map(d => {
+    const typeBadge = d.type==='positive' ? '<span class="badge-pos">Positive</span>' : '<span class="badge-neg">Negative</span>';
+    const handBadge = d.handling==='sent_to_management' ? '<span class="badge-sent">Sent to mgmt</span>' : '<span class="badge-off">Record only</span>';
+    return '<tr><td><strong>'+esc(d.employee_name)+'</strong></td><td>'+esc(STORE_MAP[d.store_id]||d.store_id)+'</td><td>'+esc(d.category)+'</td><td>'+typeBadge+'</td><td>'+esc(d.description||'—')+(d.notes?'<br><span style="color:var(--muted);font-size:11px;">'+esc(d.notes)+'</span>':'')+'</td><td>'+handBadge+'</td><td>'+esc(d.manager_name||d.manager_username||'—')+'</td><td style="white-space:nowrap;color:var(--muted);font-size:12px;">'+esc(fmtTs(d.created_at))+'</td></tr>';
+  }).join('') : '<tr><td colspan="8" class="staff-empty">No incidents found.</td></tr>';
+};
+
+window.clearHistoryFilters = function(){
+  document.getElementById('histEmployee').value = '';
+  document.getElementById('histMonth').value = '';
+  renderHistory();
+};
+
+// ── Monthly Report submission (manual, branch-specific) ─────────────────────
+// Writes a /report_requests doc. A Cloud Function (onReportRequestCreated) then
+// builds the Excel file and emails it to management. Frontend only writes.
+window.submitMonthlyReport = async function(){
+  const store = activeStore();
+  if (needSpecificStore(store)) return;
+  const period = document.getElementById('reportMonth').value;
+  const statusEl = document.getElementById('reportStatus');
+  if (!period){ Swal.fire({text:'Select the report month.', icon:'info'}); return; }
+
+  const monthLabel = fmtPeriod(period);
+  const confirm = await Swal.fire({
+    title:'Submit monthly report?',
+    html:'Send the <strong>'+esc(store.name)+'</strong> evaluations &amp; incidents for <strong>'+esc(monthLabel)+'</strong> to management?',
+    icon:'question', showCancelButton:true, confirmButtonText:'Submit', confirmButtonColor:'#b22025'
+  });
+  if (!confirm.isConfirmed) return;
+
+  const btn = document.getElementById('reportBtn');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+  statusEl.textContent = '';
+  try {
+    const id = store.id + '_' + period + '_' + Date.now();
+    await setDoc(doc(db,'report_requests', id), {
+      store_id: store.id, store_name: store.name,
+      period,                                   // "YYYY-MM"
+      manager_username: _session.username, manager_name: _session.username,
+      status: 'pending', requested_at: serverTimestamp()
+    });
+    btn.disabled=false; btn.textContent='Submit Monthly Report';
+    statusEl.innerHTML = '✅ Report queued for '+esc(monthLabel)+'. Management will receive the email shortly.';
+    Swal.fire({text:'Monthly report submitted', icon:'success', timer:1400, showConfirmButton:false});
+  } catch(e){
+    btn.disabled=false; btn.textContent='Submit Monthly Report';
+    Swal.fire({text:'Submission failed: '+e.message, icon:'error'});
+  }
+};
+</script>
+</body>
+</html>
