@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bloom Pharmacy — Branch Manager Guide</title>
+<style>
+  :root{
+    --green:#047857;        /* primary */
+    --green-light:#ecfdf5;
+    --green-mid:#10b981;
+    --indigo:#4f46e5;       /* secondary accent */
+    --indigo-light:#eef2ff;
+    --ink:#1f2937;
+    --muted:#6b7280;
+    --line:#e5e7eb;
+    --white:#ffffff;
+    --bg:#f3f4f6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{background:var(--bg);color:var(--ink);
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;line-height:1.6;}
+  a{color:var(--indigo);}
+
+  /* ── Screen layout ── */
+  .deck{max-width:1040px;margin:0 auto;padding:28px 18px 60px;}
+  .slide{
+    background:var(--white);border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.08);
+    padding:44px 48px;margin:0 auto 28px;position:relative;overflow:hidden;
+    border-top:6px solid var(--green);
+  }
+  .slide.indigo-top{border-top-color:var(--indigo);}
+  .kicker{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--green);background:var(--green-light);padding:5px 12px;border-radius:999px;margin-bottom:14px;}
+  .kicker.indigo{color:var(--indigo);background:var(--indigo-light);}
+  h1{font-size:40px;line-height:1.15;margin-bottom:12px;letter-spacing:-.02em;}
+  h2{font-size:27px;margin-bottom:8px;letter-spacing:-.01em;}
+  h3{font-size:18px;margin:18px 0 8px;color:var(--green);}
+  p{margin-bottom:12px;color:#374151;}
+  .lead{font-size:18px;color:var(--muted);}
+
+  /* Brand header — drop-in logo image */
+  .brand{display:flex;align-items:center;gap:14px;margin-bottom:26px;}
+  .logo{height:56px;min-width:56px;padding:6px 12px;border-radius:14px;background:#fff;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.06);}
+  .logo img{max-height:40px;display:block;}
+  .brand .name{font-weight:800;font-size:18px;}
+  .brand .sub{font-size:12px;color:var(--muted);letter-spacing:.03em;}
+
+  /* Cover */
+  .cover{min-height:520px;display:flex;flex-direction:column;justify-content:center;
+    background:radial-gradient(1200px 400px at 100% 0,var(--indigo-light),transparent),
+               radial-gradient(900px 400px at 0 100%,var(--green-light),transparent);}
+  .cover h1{font-size:48px;}
+  .cover .badge-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px;}
+  .badge{font-size:13px;font-weight:600;padding:8px 14px;border-radius:999px;border:1.5px solid var(--line);background:#fff;color:#374151;}
+  .badge b{color:var(--green);}
+
+  /* Callouts */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px;}
+  .card{border:1px solid var(--line);border-radius:12px;padding:18px 20px;background:#fff;}
+  .card .ic{font-size:26px;}
+  .card h4{font-size:16px;margin:6px 0;}
+  .steps{counter-reset:step;list-style:none;margin:6px 0;}
+  .steps li{position:relative;padding:10px 0 10px 46px;border-bottom:1px dashed var(--line);}
+  .steps li:last-child{border-bottom:none;}
+  .steps li::before{counter-increment:step;content:counter(step);position:absolute;left:0;top:9px;
+    width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font-weight:700;
+    display:flex;align-items:center;justify-content:center;font-size:14px;}
+  .steps.indigo li::before{background:var(--indigo);}
+
+  .callout{border-left:5px solid var(--indigo);background:var(--indigo-light);border-radius:10px;padding:14px 18px;margin:16px 0;}
+  .callout.warn{border-left-color:#dc2626;background:#fef2f2;}
+  .callout.good{border-left-color:var(--green);background:var(--green-light);}
+  .callout .t{font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+
+  table.info{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;}
+  table.info th{background:var(--green);color:#fff;text-align:left;padding:10px 12px;}
+  table.info td{padding:10px 12px;border-bottom:1px solid var(--line);}
+  table.info tr:nth-child(even) td{background:#fafafa;}
+
+  .pill{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;}
+  .pill.green{background:var(--green-light);color:var(--green);}
+  .pill.red{background:#fef2f2;color:#dc2626;}
+  .pill.indigo{background:var(--indigo-light);color:var(--indigo);}
+
+  .foot{margin-top:24px;padding-top:14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);
+    display:flex;justify-content:space-between;}
+
+  /* Print button (screen only) */
+  .printbar{position:fixed;top:16px;right:16px;z-index:50;}
+  .printbtn{background:var(--indigo);color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:14px;
+    font-weight:700;cursor:pointer;box-shadow:0 8px 20px rgba(79,70,229,.35);}
+  .printbtn:hover{background:#4338ca;}
+
+  /* ══════════ PRINT / PDF ══════════ */
+  @media print{
+    @page{ size:A4 landscape; margin:12mm; }
+    html,body{background:#fff;}
+    .deck{max-width:none;margin:0;padding:0;}
+    .no-print{display:none !important;}
+    .slide{
+      box-shadow:none;border-radius:0;margin:0;min-height:auto;
+      page-break-after:always;break-after:page;
+      border:none;border-top:6px solid var(--green);
+    }
+    .slide.indigo-top{border-top:6px solid var(--indigo);}
+    .slide:last-child{page-break-after:auto;break-after:auto;}
+    .cover{min-height:170mm;}
+    /* Force background colors + graphics to print */
+    *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    h1{font-size:40px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="printbar no-print">
+  <button class="printbtn" onclick="window.print()">🖨 Print / Save as PDF</button>
+</div>
+
+<div class="deck">
+
+  <!-- ══ SLIDE 1 — COVER ══ -->
+  <section class="slide cover">
+    <div class="brand">
+      <div class="logo"><img src="./bloom-logo.png" alt="Bloom Pharmacy"></div>
+      <div><div class="name">Bloom Pharmacy</div><div class="sub">Customer Care &amp; Reporting</div></div>
+    </div>
+    <div class="kicker">Branch Manager Guide</div>
+    <h1>Your Dashboard,<br>Made Simple.</h1>
+    <p class="lead">Everything you need to handle customer feedback, support and celebrate your team, and send your monthly reports — in one place.</p>
+    <div class="badge-row">
+      <span class="badge">📋 <b>Customer Tickets</b></span>
+      <span class="badge">⚡ <b>Staff Incidents</b></span>
+      <span class="badge">⭐ <b>Staff Evaluations</b></span>
+      <span class="badge">🏆 <b>Employee of the Month</b></span>
+      <span class="badge">📊 <b>Analytics</b></span>
+      <span class="badge">📤 <b>Monthly Reports</b></span>
+    </div>
+    <div class="foot"><span>Bloom Pharmacy — Internal Training</span><span>Branch Manager Edition</span></div>
+  </section>
+
+  <!-- ══ SLIDE 2 — WELCOME ══ -->
+  <section class="slide">
+    <div class="kicker">Welcome</div>
+    <h2>What this dashboard does for you</h2>
+    <p class="lead">Think of it as your branch's control room. Customers leave feedback by scanning a QR code, and everything they say lands here for you to act on.</p>
+    <div class="grid">
+      <div class="card"><div class="ic">📋</div><h4>See customer feedback</h4><p>Every review from your branch appears instantly, so nothing slips through the cracks.</p></div>
+      <div class="card"><div class="ic">⭐</div><h4>Support your team</h4><p>Evaluate staff each month, log great moments or issues, and nominate an Employee of the Month.</p></div>
+      <div class="card"><div class="ic">📊</div><h4>See the trends</h4><p>Simple charts show how your team is performing over time and how staff compare.</p></div>
+      <div class="card"><div class="ic">📤</div><h4>Report with one click</h4><p>Send your monthly summary to management automatically — no spreadsheets by hand.</p></div>
+    </div>
+    <div class="callout good"><div class="t">✅ Good to know</div>You don't need any technical skills. If you can use a phone, you can use this dashboard. You only ever see your own branch.</div>
+  </section>
+
+  <!-- ══ SLIDE 3 — LOGGING IN ══ -->
+  <section class="slide indigo-top">
+    <div class="kicker indigo">Getting Started</div>
+    <h2>Signing in</h2>
+    <ol class="steps indigo">
+      <li>Open the dashboard link on your computer or phone browser.</li>
+      <li>Enter your <b>username</b> and <b>password</b> (provided by management).</li>
+      <li>You'll land on your branch's dashboard. Your session stays active for 30 days.</li>
+    </ol>
+    <div class="callout"><div class="t">💡 Tip</div>Use the <b>Sign out</b> button when using a shared computer. At the top you'll find tabs for <b>Feedback</b>, <b>Staff Evaluation</b>, and <b>Analytics</b>.</div>
+  </section>
+
+  <!-- ══ SLIDE 4 — CUSTOMER TICKETS ══ -->
+  <section class="slide">
+    <div class="kicker">Feature 1</div>
+    <h2>📋 Handling Customer Tickets</h2>
+    <p>When a customer leaves feedback, it becomes a <b>ticket</b>. Your job is to review it and follow up.</p>
+    <ol class="steps">
+      <li>Open the <b>Feedback</b> tab — you'll see all your branch's tickets, newest first.</li>
+      <li>Read the review and rating. Low ratings (1–2 ★) are flagged for quick attention.</li>
+      <li>Add a <b>note</b> about what you did, then set the <b>Status</b> (New → In Progress → Resolved → Closed).</li>
+      <li>Click <b>Save</b>. The 📋 icon shows the full activity history for that ticket.</li>
+    </ol>
+    <div class="callout warn"><div class="t">⚠️ Complaints (1–2 ★)</div>These are automatically emailed to management too — so please follow up with the customer as soon as possible.</div>
+  </section>
+
+  <!-- ══ SLIDE 5 — STAFF INCIDENTS ══ -->
+  <section class="slide indigo-top">
+    <div class="kicker indigo">Feature 2</div>
+    <h2>⚡ Recording Staff Incidents</h2>
+    <p>Noticed something worth recording — good or bad? Log it the moment it happens, under <b>Staff Evaluation → Instant Incident</b>.</p>
+    <ol class="steps indigo">
+      <li>Select the <b>employee</b> and the <b>category</b> (name tag, dress code, customer interaction, positive behavior…).</li>
+      <li>Choose the <b>type</b>: <span class="pill green">Positive</span> or <span class="pill red">Negative</span>.</li>
+      <li>Describe what happened and add any notes.</li>
+      <li>Pick how to handle it, then <b>Save</b>.</li>
+    </ol>
+    <table class="info">
+      <tr><th>Option</th><th>What happens</th></tr>
+      <tr><td><b>Record only</b></td><td>Saved to the employee's history. Management is <b>not</b> emailed.</td></tr>
+      <tr><td><b>Record &amp; send to management</b></td><td>Saved <b>and</b> emailed to management right away.</td></tr>
+    </table>
+    <div class="callout"><div class="t">💡 Remember</div>The option resets to “Record only” after each save — switch it to “send to management” whenever you want management notified.</div>
+  </section>
+
+  <!-- ══ SLIDE 6 — STAFF EVALUATIONS + TIME LOCK ══ -->
+  <section class="slide">
+    <div class="kicker">Feature 3</div>
+    <h2>⭐ Monthly Staff Evaluations</h2>
+    <p>Once a month, give each team member a single score from <b>1 to 10</b> based on how consistently they delivered Bloom's customer experience standards.</p>
+    <div class="grid">
+      <div class="card"><h4>How to score</h4><p>Consider greeting &amp; politeness, attentiveness, product knowledge, speed, complaint handling, teamwork, and appearance/SOPs — then give <b>one</b> overall score.</p></div>
+      <div class="card"><h4>The scale</h4><p>1–2 far below · 3–4 below · 5–6 meets minimum · 7–8 strong · 9 outstanding · 10 role model.</p></div>
+    </div>
+    <div class="callout warn">
+      <div class="t">🔒 Important rule — the 24th deadline</div>
+      You can only evaluate staff for the <b>current month</b>, and the window <b>closes on the 24th</b>. After the 24th, the form locks — you can still <b>view, export, and submit</b> the report, but you cannot add or change evaluations for that month. Future months are never allowed.
+    </div>
+    <div class="callout good"><div class="t">✅ Helpful</div>While scoring, the form shows that employee's <b>incidents this month</b> and a small <b>score-trend chart</b>, so you have the full picture before you decide.</div>
+  </section>
+
+  <!-- ══ SLIDE 7 — EMPLOYEE OF THE MONTH + ANALYTICS ══ -->
+  <section class="slide indigo-top">
+    <div class="kicker indigo">Feature 4 &amp; 5</div>
+    <h2>🏆 Employee of the Month &amp; 📊 Insights</h2>
+    <h3>Nominate your star</h3>
+    <ol class="steps indigo">
+      <li>In the Monthly Evaluation, tick <b>“🏆 Nominate as Employee of the Month”</b>, then click <b>Save Evaluation</b>.</li>
+      <li>A <b>“✉️ Send EOTM Nomination to HR”</b> button appears — click it to send the nomination (with the score, your comment, and the employee's average) straight to HR.</li>
+      <li>The form also shows <b>last month's winner</b> for your branch, so you can keep things fair.</li>
+    </ol>
+    <div class="callout good"><div class="t">📊 The Analytics tab</div>Open the <b>Analytics</b> tab to see clean charts: your team's <b>average score by employee</b> and the <b>monthly trend</b>. It's a great way to spot who's improving and who might need support.</div>
+  </section>
+
+  <!-- ══ SLIDE 8 — MONTHLY REPORTS + EXPORTS ══ -->
+  <section class="slide">
+    <div class="kicker">Feature 6</div>
+    <h2>📤 Monthly Reports &amp; Exports</h2>
+    <p>At month's end, send your branch's summary to management — the system builds the Excel file and emails it for you.</p>
+    <ol class="steps">
+      <li>Go to <b>Staff Evaluation → History</b>.</li>
+      <li>Pick the <b>report month</b> and click <b>Submit Monthly Report</b>.</li>
+      <li>Confirm — management receives the full Excel report automatically.</li>
+    </ol>
+    <h3>Need a copy for yourself?</h3>
+    <p>Use the export buttons in the History tab to download the current view:</p>
+    <p><span class="pill green">⬇ Excel</span>&nbsp; <span class="pill indigo">⬇ CSV</span>&nbsp; <span class="pill red">⬇ PDF</span></p>
+    <div class="callout"><div class="t">💡 Already sent?</div>If you submit the same month twice, the system asks you to confirm before <b>resending</b> — so you never send duplicates by accident.</div>
+  </section>
+
+  <!-- ══ SLIDE 9 — QUICK TIPS / FAQ ══ -->
+  <section class="slide">
+    <div class="kicker">Quick Reference</div>
+    <h2>Handy tips &amp; common questions</h2>
+    <table class="info">
+      <tr><th>Question</th><th>Answer</th></tr>
+      <tr><td>I can't add an evaluation — why?</td><td>It's likely after the 24th, or you selected a past/future month. Only the current month is editable, through the 24th.</td></tr>
+      <tr><td>How do I nominate Employee of the Month?</td><td>Tick the 🏆 box, Save, then click “Send EOTM Nomination to HR”.</td></tr>
+      <tr><td>Where do I see performance trends?</td><td>The <b>Analytics</b> tab — plus a mini trend chart under each evaluation.</td></tr>
+      <tr><td>Do complaints reach management?</td><td>Yes — 1–2★ tickets are emailed automatically. You still follow up with the customer.</td></tr>
+      <tr><td>Can I see other branches?</td><td>No — you only see your own branch. That's by design.</td></tr>
+      <tr><td>Where do reports go?</td><td>Straight to management's inbox as an Excel file. You can also export your own copy.</td></tr>
+    </table>
+    <div class="callout good"><div class="t">✅ Golden rule</div>Log incidents when they happen, evaluate (and nominate) before the 24th, and submit your report at month's end.</div>
+  </section>
+
+  <!-- ══ SLIDE 10 — CLOSING ══ -->
+  <section class="slide indigo-top cover">
+    <div class="brand">
+      <div class="logo"><img src="./bloom-logo.png" alt="Bloom Pharmacy"></div>
+      <div><div class="name">Bloom Pharmacy</div><div class="sub">Customer Care &amp; Reporting</div></div>
+    </div>
+    <div class="kicker indigo">You're ready!</div>
+    <h1>Thank you for<br>taking great care.</h1>
+    <p class="lead">Every ticket you resolve, every fair evaluation, and every star you celebrate makes Bloom better for our customers and our team. If you ever get stuck, reach out to management — we've got your back.</p>
+    <div class="callout good" style="margin-top:20px;"><div class="t">📌 Remember the rhythm</div>Handle tickets daily · Log incidents as they happen · Evaluate &amp; nominate before the 24th · Submit your monthly report.</div>
+    <div class="foot"><span>Bloom Pharmacy — Branch Manager Guide</span><span>Print this page to PDF and keep it handy</span></div>
+  </section>
+
+</div>
+</body>
+</html>
